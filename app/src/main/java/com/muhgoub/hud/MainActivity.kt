@@ -5,8 +5,6 @@ import android.widget.Button
 import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import java.io.BufferedReader
-import java.io.InputStreamReader
 
 class MainActivity : AppCompatActivity() {
 
@@ -29,10 +27,10 @@ class MainActivity : AppCompatActivity() {
         btnModeTurbo = findViewById(R.id.btnModeTurbo)
         switchPermission = findViewById(R.id.switchPermission)
 
-        // جلب رقم الكيرنل في الخلفية بدون ما يجمد التاتش أو الشاشة
-        fetchAndCleanKernel()
+        // جلب رقم الكيرنل بطريقة فورية وآمنة 100% بدون أي تجميد للتاتش
+        loadKernelSafely()
 
-        // الأزرار وتفاعلاتها ستعمل فوراً بدون أي تعليق
+        // تفاعلات الأزرار ستعمل فوراً من أول لمسة
         btnLaunchPanel.setOnClickListener {
             // كود تشغيل الرادار
         }
@@ -46,34 +44,22 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnModeTurbo.setOnClickListener {
-            fetchAndCleanKernel()
+            loadKernelSafely()
         }
     }
 
-    private fun fetchAndCleanKernel() {
-        // تشغيل العملية بالكامل في خلفية منفصلة تماماً عشان التطبيق يفتح سلس
-        Thread {
-            var rawKernel = ""
-            try {
-                val process = Runtime.getRuntime().exec("uname -r")
-                val reader = BufferedReader(InputStreamReader(process.inputStream))
-                rawKernel = reader.readLine() ?: ""
-                // تم إزالة process.waitFor() لمنع تجميد واجهة المستخدم
-            } catch (e: Exception) {
-                rawKernel = ""
-            }
-
-            if (rawKernel.isBlank()) {
-                rawKernel = System.getProperty("os.version") ?: "6.1.157"
-            }
-
-            // قص النص الطويل وأخذ الرقم الصافي فقط
+    private fun loadKernelSafely() {
+        try {
+            // استخدام os.version المباشر بدون أوامر خارجية قد تجمد واجهة التطبيق
+            val rawKernel = System.getProperty("os.version") ?: "6.1.157"
+            
+            // استخراج الرقم الصافي فقط (مثل 6.1.157)
             val cleanKernel = rawKernel.split("-", " ")[0]
 
-            // تحديث واجهة المستخدم بأمان تام
-            runOnUiThread {
-                tvKernelVersion.text = "$cleanKernel : نسخة الكيرنل"
-            }
-        }.start()
+            // العرض الفوري على الشاشة
+            tvKernelVersion.text = "$cleanKernel : نسخة الكيرنل"
+        } catch (e: Exception) {
+            tvKernelVersion.text = "6.1.157 : نسخة الكيرنل"
+        }
     }
 }
