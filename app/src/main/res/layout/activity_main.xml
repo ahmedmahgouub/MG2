@@ -19,7 +19,6 @@
             android:textSize="11sp"
             android:textStyle="bold" />
 
-        <!-- صف أيقونات اختصارات النظام -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -50,7 +49,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:text="Wi-Fi"
+                    android:text="@string/tool_wifi"
                     android:textColor="@color/text_secondary"
                     android:textSize="10sp" />
             </LinearLayout>
@@ -78,7 +77,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:text="BT"
+                    android:text="@string/tool_bluetooth"
                     android:textColor="@color/text_secondary"
                     android:textSize="10sp" />
             </LinearLayout>
@@ -106,7 +105,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:text="Flash"
+                    android:text="@string/tool_flashlight"
                     android:textColor="@color/text_secondary"
                     android:textSize="10sp" />
             </LinearLayout>
@@ -134,7 +133,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:text="Hotspot"
+                    android:text="@string/tool_hotspot"
                     android:textColor="@color/text_secondary"
                     android:textSize="10sp" />
             </LinearLayout>
@@ -162,52 +161,43 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:text="Dark Mod"
+                    android:text="@string/tool_dark_mode"
                     android:textColor="@color/text_secondary"
                     android:textSize="10sp" />
             </LinearLayout>
 
         </LinearLayout>
 
-        <!-- زر تشغيل الرادار (تم ضبط الـ padding و stateListAnimator لمنع موت التاتش) -->
+        <!-- زر تشغيل الرادار -->
         <Button
             android:id="@+id/btnLaunchPanel"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:layout_marginTop="32dp"
             android:background="@drawable/bg_main_button"
-            android:clickable="true"
-            android:focusable="true"
-            android:stateListAnimator="@null"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
             android:text="تشغيل الرادار"
+            android:textAllCaps="false"
             android:textColor="@color/white"
             android:textSize="16sp"
             android:textStyle="bold" />
 
-        <!-- نسخة الكيرنل -->
         <TextView
-            android:id="@+id/tvKernelVersion"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="@drawable/bg_overlay_card"
-            android:gravity="center"
-            android:padding="14dp"
-            android:text="جاري جلب الكيرنل..."
-            android:textColor="@color/white"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+            android:layout_marginTop="20dp"
+            android:layout_gravity="center"
+            android:text="@string/app_name"
+            android:textColor="@color/text_secondary"
+            android:textSize="11sp" />
 
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="16dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="20dp"
             android:background="@color/icon_circle_gray" />
 
-        <!-- أزرار الأوضاع -->
+        <!-- أزرار Normal و Kernel -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -215,66 +205,54 @@
             android:weightSum="2">
 
             <Button
-                android:id="@+id/btnModeTurbo"
+                android:id="@+id/btnModeNormal"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"
                 android:layout_marginEnd="8dp"
-                android:background="@drawable/bg_segment_outline"
-                android:clickable="true"
-                android:focusable="true"
-                android:stateListAnimator="@null"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:text="Kernel"
+                android:background="@drawable/bg_segment_filled"
+                android:text="Normal"
+                android:textAllCaps="false"
                 android:textColor="@color/white"
                 android:textSize="13sp"
                 android:textStyle="bold" />
 
             <Button
-                android:id="@+id/btnModeNormal"
+                android:id="@+id/btnModeTurbo"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
                 android:layout_weight="1"
-                android:background="@drawable/bg_segment_filled"
-                android:clickable="true"
-                android:focusable="true"
-                android:stateListAnimator="@null"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:text="Normal"
+                android:background="@drawable/bg_segment_outline"
+                android:text="Kernel"
+                android:textAllCaps="false"
                 android:textColor="@color/white"
-                android:textSize="13sp"
-                android:textStyle="bold" />
+                android:textSize="13sp" />
 
         </LinearLayout>
 
-        <!-- إخفاء التصوير -->
+        <!-- بطاقة خيار إخفاء التصوير -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:background="@drawable/bg_overlay_card"
-            android:clickable="true"
-            android:focusable="true"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:padding="16dp">
-
-            <Switch
-                android:id="@+id/switchPermission"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:gravity="end"
                 android:text="إخفاء التصوير"
                 android:textColor="@color/text_primary"
                 android:textSize="14sp"
                 android:textStyle="bold" />
+
+            <Switch
+                android:id="@+id/switchPermission"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
 
         </LinearLayout>
 
@@ -285,12 +263,8 @@
             android:layout_height="56dp"
             android:layout_marginTop="16dp"
             android:background="@drawable/bg_main_button"
-            android:clickable="true"
-            android:focusable="true"
-            android:stateListAnimator="@null"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
             android:text="إيقاف الرادار"
+            android:textAllCaps="false"
             android:textColor="@color/white"
             android:textSize="16sp"
             android:textStyle="bold" />
