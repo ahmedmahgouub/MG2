@@ -1,4 +1,4 @@
-package com.muhgoub.hud // تأكد أن اسم الحزمة مطابق لمشروعك
+package com.muhgoub.hud
 
 import android.os.Bundle
 import android.widget.Button
@@ -19,7 +19,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // ربط عناصر الواجهة
+        // ربط عناصر الواجهة بدقة عالية
         tvKernelVersion = findViewById(R.id.tvKernelVersion)
         btnLaunchPanel = findViewById(R.id.btnLaunchPanel)
         btnStopPanel = findViewById(R.id.btnStopPanel)
@@ -27,10 +27,10 @@ class MainActivity : AppCompatActivity() {
         btnModeTurbo = findViewById(R.id.btnModeTurbo)
         switchPermission = findViewById(R.id.switchPermission)
 
-        // جلب رقم الكيرنل بطريقة فورية وآمنة 100% بدون أي تجميد للتاتش
-        loadKernelSafely()
+        // جلب كيرنل الجهاز الفعلي فور الفتح
+        loadDeviceKernel()
 
-        // تفاعلات الأزرار ستعمل فوراً من أول لمسة
+        // تفاعلات الأزرار
         btnLaunchPanel.setOnClickListener {
             // كود تشغيل الرادار
         }
@@ -44,22 +44,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnModeTurbo.setOnClickListener {
-            loadKernelSafely()
+            loadDeviceKernel()
         }
     }
 
-    private fun loadKernelSafely() {
+    private fun loadDeviceKernel() {
         try {
-            // استخدام os.version المباشر بدون أوامر خارجية قد تجمد واجهة التطبيق
-            val rawKernel = System.getProperty("os.version") ?: "6.1.157"
-            
-            // استخراج الرقم الصافي فقط (مثل 6.1.157)
+            val rawKernel = System.getProperty("os.version") ?: android.os.Build.VERSION.INCREMENTAL ?: "1.0.0"
             val cleanKernel = rawKernel.split("-", " ")[0]
-
-            // العرض الفوري على الشاشة
             tvKernelVersion.text = "$cleanKernel : نسخة الكيرنل"
         } catch (e: Exception) {
-            tvKernelVersion.text = "6.1.157 : نسخة الكيرنل"
+            tvKernelVersion.text = "1.0.0 : نسخة الكيرنل"
         }
     }
 }
