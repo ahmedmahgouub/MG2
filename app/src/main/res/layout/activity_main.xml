@@ -10,7 +10,6 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <!-- إزالة رقم الإصدار القديم بناءً على طلبك السابق -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -160,7 +159,6 @@
 
         </LinearLayout>
 
-        <!-- زر تشغيل الرادار -->
         <Button
             android:id="@+id/btnLaunchPanel"
             android:layout_width="match_parent"
@@ -173,7 +171,7 @@
             android:textSize="16sp"
             android:textStyle="bold" />
 
-        <!-- مكان عرض كلمة MUHGOUB أو أول 5 أرقام من الكيرنال -->
+        <!-- مكان عرض كلمة MUHGOUB أو أول 5 أرقام من الكيرنال باللون البرتقالي الغامق -->
         <TextView
             android:id="@+id/tvKernelDisplay"
             android:layout_width="wrap_content"
@@ -181,8 +179,9 @@
             android:layout_marginTop="20dp"
             android:layout_gravity="center"
             android:text="MUHGOUB"
-            android:textColor="@color/text_secondary"
-            android:textSize="11sp" />
+            android:textColor="#FF8C00"
+            android:textSize="11sp"
+            android:textStyle="bold" />
 
         <View
             android:layout_width="match_parent"
@@ -191,7 +190,6 @@
             android:layout_marginBottom="20dp"
             android:background="@color/icon_circle_gray" />
 
-        <!-- أزرار الأوضاع: Normal و Kernel -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -224,7 +222,6 @@
 
         </LinearLayout>
 
-        <!-- بطاقة خيار إخفاء التصوير مع النص الجديد والنظام -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -265,7 +262,6 @@
 
         </LinearLayout>
 
-        <!-- زر إيقاف الرادار -->
         <Button
             android:id="@+id/btnStopPanel"
             android:layout_width="match_parent"
