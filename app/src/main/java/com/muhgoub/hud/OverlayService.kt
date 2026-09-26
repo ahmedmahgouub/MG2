@@ -1,470 +1,221 @@
-package com.muhgoub.hud
+package com.example.hudoverlay // استبدل هذا بحزمة المشروع لديك
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
-import android.bluetooth.BluetoothAdapter
-import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.PixelFormat
-import android.hardware.camera2.CameraAccessException
-import android.hardware.camera2.CameraManager
-import android.net.TrafficStats
-import android.net.wifi.WifiManager
 import android.os.Build
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
-import android.provider.Settings
-import android.util.TypedValue
 import android.view.Gravity
+import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.app.NotificationCompat
-import java.net.InetAddress
-import kotlin.concurrent.thread
-import kotlin.math.abs
 
 class OverlayService : Service() {
 
-    companion object {
-        private const val CHANNEL_ID = "muhgoub_hud_channel"
-        private const val NOTIFICATION_ID = 1001
-        const val ACTION_STOP = "com.muhgoub.hud.action.STOP"
-    }
-
     private lateinit var windowManager: WindowManager
-    private lateinit var prefs: PrefsManager
-    private val mainHandler = Handler(Looper.getMainLooper())
+    private lateinit var overlayView: View
+    private lateinit var params: WindowManager.LayoutParams
 
-    private var bubbleView: View? = null
-    private var panelView: View? = null
-    private var bubbleParams: WindowManager.LayoutParams? = null
-    private var panelParams: WindowManager.LayoutParams? = null
+    // مصفوفة لتخزين حالة الـ 12 زرار أداة (تشغيل / إيقاف)
+    private val toolStates = BooleanArray(12) { false }
 
-    private val toggleButtons = arrayOfNulls<Button>(12)
-
-    override fun onCreate() {
-        super.onCreate()
-        windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        prefs = PrefsManager(this)
-
-        startForeground(NOTIFICATION_ID, buildNotification())
-
-        addBubbleView()
-        addPanelView()
-
-        applyCoreAlign(prefs.getCoreAlign())
-        setPanelVisible(prefs.isOverlayExpanded())
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) stopSelf()
-        return START_STICKY
-    }
+    // متغيرات حفظ حالات أقسام التحكم السفلية
+    private var boundingBoxMode = "off"
+    private var radarLineMode = "off"
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    override fun onDestroy() {
-        bubbleView?.let { runCatching { windowManager.removeView(it) } }
-        panelView?.let { runCatching { windowManager.removeView(it) } }
-        super.onDestroy()
-    }
+    override fun onCreate() {
+        super.onCreate()
+        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
 
-    private fun buildNotification(): android.app.Notification {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val manager = getSystemService(NotificationManager::class.java)
-            val channel = NotificationChannel(
-                CHANNEL_ID, getString(R.string.app_name), NotificationManager.IMPORTANCE_LOW
-            )
-            manager.createNotificationChannel(channel)
-        }
-        val stopIntent = Intent(this, OverlayService::class.java).apply { action = ACTION_STOP }
-        val stopPendingIntent = PendingIntent.getService(
-            this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.panel_running))
-            .setSmallIcon(R.drawable.ic_notification)
-            .setOngoing(true)
-            .addAction(0, getString(R.string.close_panel), stopPendingIntent)
-            .build()
-    }
-
-    private fun addBubbleView() {
-        val view = View.inflate(this, R.layout.overlay_bubble, null)
-        val (savedX, savedY) = prefs.getOverlayPosition()
-
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            overlayWindowType(),
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = savedX
-            y = savedY
-        }
-
-        view.setOnTouchListener(DragTapListener(params) { tapped ->
-            if (tapped) togglePanelVisibility()
-        })
-
-        windowManager.addView(view, params)
-        bubbleView = view
-        bubbleParams = params
-    }
-
-    private fun togglePanelVisibility() {
-        setPanelVisible(panelView?.visibility != View.VISIBLE)
-    }
-
-    private fun setPanelVisible(visible: Boolean) {
-        prefs.setOverlayExpanded(visible)
-        panelView?.visibility = if (visible) View.VISIBLE else View.GONE
-    }
-
-    private fun addPanelView() {
-        val view = View.inflate(this, R.layout.overlay_panel, null)
-
-        val panelWidthPx = cmToPx(6f)
-        val panelHeightPx = cmToPx(6f)
-
-        val params = WindowManager.LayoutParams(
-            panelWidthPx,
-            panelHeightPx,
-            overlayWindowType(),
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            val (savedX, savedY) = prefs.getOverlayPosition()
-            x = savedX
-            y = savedY
-        }
-
-        val dragHandle = view.findViewById<View>(R.id.dragHandle)
-        dragHandle.setOnTouchListener(DragTapListener(params) { })
-
-        view.findViewById<ImageButton>(R.id.btnMinimize).setOnClickListener {
-            setPanelVisible(false)
-        }
-
-        bindToolButtons(view)
-        bindRadioGroups(view)
-        applyStatusMode(view, prefs.getStatusMode())
-
-        windowManager.addView(view, params)
-        panelView = view
-        panelParams = params
-    }
-
-    private fun bindToolButtons(root: View) {
-        val ids = intArrayOf(
-            R.id.btnTool0, R.id.btnTool1, R.id.btnTool2, R.id.btnTool3,
-            R.id.btnTool4, R.id.btnTool5, R.id.btnTool6, R.id.btnTool7,
-            R.id.btnTool8, R.id.btnTool9, R.id.btnTool10, R.id.btnTool11
-        )
-
-        for (i in ids.indices) {
-            val button = root.findViewById<Button>(ids[i])
-            toggleButtons[i] = button
-            applyToggleStyle(button, prefs.isToolOn(i))
-
-            button.setOnClickListener {
-                val newState = !prefs.isToolOn(i)
-                prefs.setToolOn(i, newState)
-                applyToggleStyle(button, newState)
-                performToolAction(i, newState)
-            }
-        }
-    }
-
-    private fun applyToggleStyle(button: Button, on: Boolean) {
-        val checkIcon = if (on) R.drawable.ic_check_on else R.drawable.ic_check_off
-        button.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, checkIcon, 0)
-        button.setBackgroundResource(if (on) R.drawable.bg_toggle_on else R.drawable.bg_toggle_off)
-        val textColorRes = if (on) R.color.bg_dark else R.color.text_primary
-        button.setTextColor(resources.getColor(textColorRes, theme))
-    }
-
-    private fun bindRadioGroups(root: View) {
-        // ربط أزرار المحاذاة (Radar line) بشكل تفاعلي صحيح
-        val alignButtons = mapOf(
-            root.findViewById<Button>(R.id.rbAlignBottom) to "bottom",
-            root.findViewById<Button>(R.id.rbAlignMid) to "mid",
-            root.findViewById<Button>(R.id.rbAlignTop) to "top",
-            root.findViewById<Button>(R.id.rbAlignOff) to "off"
-        )
-        fun refreshAlignChecks(selected: String) {
-            alignButtons.forEach { (btn, value) -> 
-                val isSelected = (value == selected)
-                applyToggleStyle(btn, isSelected)
-            }
-        }
-        refreshAlignChecks(prefs.getCoreAlign())
-        alignButtons.forEach { (btn, value) ->
-            btn.setOnClickListener {
-                prefs.setCoreAlign(value)
-                refreshAlignChecks(value)
-                applyCoreAlign(value)
-            }
-        }
-
-        // ربط أزرار الـ Bounding box بشكل تفاعلي صحيح
-        val statusButtons = mapOf(
-            root.findViewById<Button>(R.id.rbStatusPrcs) to "prcs",
-            root.findViewById<Button>(R.id.rbStatusFill) to "fill",
-            root.findViewById<Button>(R.id.rbStatusOff) to "off"
-        )
-        fun refreshStatusChecks(selected: String) {
-            statusButtons.forEach { (btn, value) ->
-                val isSelected = (value == selected)
-                applyToggleStyle(btn, isSelected)
-            }
-        }
-        refreshStatusChecks(prefs.getStatusMode())
-        statusButtons.forEach { (btn, value) ->
-            btn.setOnClickListener {
-                prefs.setStatusMode(value)
-                refreshStatusChecks(value)
-                applyStatusMode(root, value)
-            }
-        }
-    }
-
-    private fun applyCoreAlign(value: String) {
-        if (value == "off") {
-            bubbleView?.visibility = View.GONE
-            panelView?.visibility = View.GONE
-            return
-        }
-
-        val gravity = when (value) {
-            "top" -> Gravity.TOP or Gravity.START
-            "mid" -> Gravity.CENTER_VERTICAL or Gravity.START
-            else -> Gravity.BOTTOM or Gravity.START
-        }
-
-        bubbleParams?.let {
-            it.gravity = gravity
-            bubbleView?.let { v -> runCatching { windowManager.updateViewLayout(v, it) } }
-            bubbleView?.visibility = View.VISIBLE
-        }
-        panelParams?.let {
-            it.gravity = gravity
-            panelView?.let { v -> runCatching { windowManager.updateViewLayout(v, it) } }
-        }
-        setPanelVisible(prefs.isOverlayExpanded())
-    }
-
-    private fun applyStatusMode(root: View, value: String) {
-        val dot = root.findViewById<View>(R.id.statusDot) ?: return
-        when (value) {
-            "prcs" -> { dot.visibility = View.VISIBLE; dot.setBackgroundResource(R.drawable.bg_icon_circle_gray) }
-            "fill" -> { dot.visibility = View.VISIBLE; dot.setBackgroundResource(R.drawable.bg_icon_circle_accent) }
-            "off" -> dot.visibility = View.GONE
-        }
-    }
-
-    private fun overlayWindowType(): Int {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val LAYOUT_FLAG = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         } else {
-            @Suppress("DEPRECATION")
             WindowManager.LayoutParams.TYPE_PHONE
         }
+
+        params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            LAYOUT_FLAG,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = 100
+            y = 100
+        }
+
+        // نفخ الواجهة من ملف الـ XML المحدث
+        overlayView = LayoutInflater.from(this).inflate(R.layout.overlay_panel, null)
+
+        // تفعيل حركة السحب والإغلاق
+        setupDragging()
+
+        // ربط وتفعيل الـ 12 زرار بالترتيب الصحيح
+        setupToolButtons()
+
+        // ربط وتفعيل أزرار التحكم السفلي (Bounding Box و Radar Line)
+        setupControlGroups()
+
+        windowManager.addView(overlayView, params)
     }
 
-    private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
+    private fun setupDragging() {
+        val dragHandle = overlayView.findViewById<View>(R.id.dragHandle)
+        dragHandle?.setOnTouchListener(object : View.OnTouchListener {
+            private var initialX = 0
+            private var initialY = 0
+            private var initialTouchX = 0f
+            private var initialTouchY = 0f
 
-    private fun cmToPx(cm: Float): Int =
-        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_MM, cm * 10f, resources.displayMetrics).toInt()
-
-    private fun performToolAction(index: Int, on: Boolean) {
-        try {
-            when (index) {
-                0 -> checkPing()
-                1 -> showWifiSignal()
-                2 -> openSystemScreen(dataUsageSettingsAction())
-                3 -> showBandwidthUsage()
-                4 -> showPacketStats()
-                5 -> showCoreCount()
-                6 -> toggleWifi()
-                7 -> toggleBluetooth(on)
-                8 -> openSystemScreen(Settings.ACTION_WIRELESS_SETTINGS)
-                9 -> toggleFlashlight(on)
-                10 -> toggleDarkMode(on)
-                11 -> toast(if (on) "الـ HUD شغال دلوقتي" else "الـ HUD متوقف")
+            override fun onTouch(v: View, event: MotionEvent): Boolean {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        initialX = params.x
+                        initialY = params.y
+                        initialTouchX = event.rawX
+                        initialTouchY = event.rawY
+                        return true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        params.x = initialX + (event.rawX - initialTouchX).toInt()
+                        params.y = initialY + (event.rawY - initialTouchY).toInt()
+                        windowManager.updateViewLayout(overlayView, params)
+                        return true
+                    }
+                }
+                return false
             }
-        } catch (e: SecurityException) {
-            toast(e.message ?: "Permission error")
+        })
+
+        overlayView.findViewById<ImageButton>(R.id.btnMinimize)?.setOnClickListener {
+            stopSelf()
         }
     }
 
-    private fun checkPing() {
-        toast("جارِ قياس الـ Ping...")
-        thread {
-            val start = System.currentTimeMillis()
-            val reachable = runCatching { InetAddress.getByName("8.8.8.8").isReachable(1500) }.getOrDefault(false)
-            val elapsed = System.currentTimeMillis() - start
-            mainHandler.post {
-                toast(if (reachable) "Ping: ${elapsed}ms" else "لا يوجد اتصال بالإنترنت")
-            }
-        }
-    }
-
-    private fun showWifiSignal() {
-        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        @Suppress("DEPRECATION")
-        val rssi = wifiManager.connectionInfo?.rssi
-        if (rssi == null || rssi == -127) {
-            toast("مش متصل بشبكة Wi-Fi")
-        } else {
-            val level = WifiManager.calculateSignalLevel(rssi, 5)
-            toast("قوة الإشارة: $rssi dBm ($level/4)")
-        }
-    }
-
-    private fun showBandwidthUsage() {
-        val rx = TrafficStats.getTotalRxBytes() / (1024 * 1024)
-        val tx = TrafficStats.getTotalTxBytes() / (1024 * 1024)
-        toast("تحميل: ${rx}MB | رفع: ${tx}MB")
-    }
-
-    private fun showPacketStats() {
-        val rxP = TrafficStats.getTotalRxPackets()
-        val txP = TrafficStats.getTotalTxPackets()
-        toast("الحزم: $rxP استقبال / $txP إرسال")
-    }
-
-    private fun showCoreCount() {
-        toast("عدد أنوية المعالج: ${Runtime.getRuntime().availableProcessors()}")
-    }
-
-    private fun dataUsageSettingsAction(): String {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Settings.ACTION_DATA_USAGE_SETTINGS
-        } else {
-            Settings.ACTION_WIRELESS_SETTINGS
-        }
-    }
-
-    private fun toggleWifi() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            openSystemScreen(Settings.ACTION_WIFI_SETTINGS)
-        } else {
-            @Suppress("DEPRECATION")
-            val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-            @Suppress("DEPRECATION")
-            wifiManager.isWifiEnabled = !wifiManager.isWifiEnabled
-        }
-    }
-
-    private fun toggleBluetooth(on: Boolean) {
-        val adapter = BluetoothAdapter.getDefaultAdapter()
-        if (adapter == null) { toast("Bluetooth not supported"); return }
-        if (on) {
-            val enableIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            startActivity(enableIntent)
-        } else {
-            toast(getString(R.string.bluetooth_open_settings))
-            openSystemScreen(Settings.ACTION_BLUETOOTH_SETTINGS)
-        }
-    }
-
-    private fun toggleFlashlight(on: Boolean) {
-        val cameraManager = getSystemService(Context.CAMERA_SERVICE) as CameraManager
-        try {
-            val cameraId = cameraManager.cameraIdList.firstOrNull { id ->
-                cameraManager.getCameraCharacteristics(id)
-                    .get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
-            } ?: return
-            cameraManager.setTorchMode(cameraId, on)
-        } catch (e: CameraAccessException) {
-            toast("Flashlight unavailable: ${e.message}")
-        }
-    }
-
-    private fun toggleDarkMode(on: Boolean) {
-        prefs.setPanelTheme(if (on) "dark" else "light")
-        AppCompatDelegate.setDefaultNightMode(
-            if (on) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+    private fun setupToolButtons() {
+        // مصفوفة الـ IDs للـ 12 زرار مطابقة لملف الـ XML تماماً
+        val toolButtonIds = intArrayOf(
+            R.id.btnTool0,  // إطار الأعداء
+            R.id.btnTool1,  // شريط الصحة
+            R.id.btnTool2,  // أسماء اللاعبين
+            R.id.btnTool3,  // المسافة
+            R.id.btnTool4,  // الهيكل العظمي
+            R.id.btnTool5,  // نقطة الرأس
+            R.id.btnTool6,  // السلاح المستخدم
+            R.id.btnTool7,  // خطوط الرادار
+            R.id.btnTool8,  // تحذير القنابل
+            R.id.btnTool9,  // تنبيه الحواف
+            R.id.btnTool10, // رقم الفريق
+            R.id.btnTool11  // عدد الاعداء
         )
-    }
 
-    private fun openSystemScreen(action: String) {
-        val intent = Intent(action).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
-        startActivity(intent)
-    }
-
-    private fun toast(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-    }
-
-    private inner class DragTapListener(
-        private val params: WindowManager.LayoutParams,
-        private val onTap: (Boolean) -> Unit
-    ) : View.OnTouchListener {
-
-        private var initialX = 0
-        private var initialY = 0
-        private var initialTouchX = 0f
-        private var initialTouchY = 0f
-        private var moved = false
-
-        override fun onTouch(v: View, event: MotionEvent): Boolean {
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    initialX = params.x
-                    initialY = params.y
-                    initialTouchX = event.rawX
-                    initialTouchY = event.rawY
-                    moved = false
-                    return true
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    val dx = (event.rawX - initialTouchX).toInt()
-                    val dy = (event.rawY - initialTouchY).toInt()
-
-                    if (abs(dx) > 5 || abs(dy) > 5) {
-                        moved = true
-                    }
-
-                    val verticalSign = if ((params.gravity and Gravity.BOTTOM) == Gravity.BOTTOM) -1 else 1
-
-                    params.x = initialX + dx
-                    params.y = initialY + (dy * verticalSign)
-
-                    bubbleParams?.let {
-                        it.x = params.x
-                        it.y = params.y
-                        bubbleView?.let { bv -> runCatching { windowManager.updateViewLayout(bv, it) } }
-                    }
-                    panelParams?.let {
-                        it.x = params.x
-                        it.y = params.y
-                        panelView?.let { pv -> runCatching { windowManager.updateViewLayout(pv, it) } }
-                    }
-                    return true
-                }
-                MotionEvent.ACTION_UP -> {
-                    prefs.setOverlayPosition(params.x, params.y)
-                    onTap(!moved)
-                    return true
-                }
+        for (i in toolButtonIds.indices) {
+            val button = overlayView.findViewById<Button>(toolButtonIds[i])
+            button?.setOnClickListener {
+                toolStates[i] = !toolStates[i]
+                updateToolButtonVisual(button, toolStates[i])
+                performToolAction(i, toolStates[i])
             }
-            return false
+        }
+    }
+
+    private fun updateToolButtonVisual(button: Button, isActive: Boolean) {
+        if (isActive) {
+            button.setBackgroundColor(Color.parseColor("#4CAF50")) // أخضر عند التفعيل
+            button.setTextColor(Color.WHITE)
+        } else {
+            button.setBackgroundResource(R.drawable.bg_toggle_off)
+            button.setTextColor(Color.parseColor("#CCCCCC"))
+        }
+    }
+
+    private fun performToolAction(index: Int, isActive: Boolean) {
+        val toolName = when (index) {
+            0 -> "إطار الأعداء"
+            1 -> "شريط الصحة"
+            2 -> "أسماء اللاعبين"
+            3 -> "المسافة"
+            4 -> "الهيكل العظمي"
+            5 -> "نقطة الرأس"
+            6 -> "السلاح المستخدم"
+            7 -> "خطوط الرادار"
+            8 -> "تحذير القنابل"
+            9 -> "تنبيه الحواف"
+            10 -> "رقم الفريق"
+            11 -> "عدد الاعداء"
+            else -> "أداة $index"
+        }
+        val statusText = if (isActive) "تم التفعيل" else "تم الإيقاف"
+        Toast.makeText(this, "$toolName: $statusText", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun setupControlGroups() {
+        // --- مجموعة Bounding box (Off / Filled / Precise) ---
+        val btnBoxOff = overlayView.findViewById<Button>(R.id.btnBoxOff)
+        val btnBoxFilled = overlayView.findViewById<Button>(R.id.btnBoxFilled)
+        val btnBoxPrecise = overlayView.findViewById<Button>(R.id.btnBoxPrecise)
+
+        fun updateBoxUI(mode: String) {
+            boundingBoxMode = mode
+            // تحديث الألوان بصرياً (مثال: الأخضر للمحدد والباقي عادي)
+            btnBoxOff?.setBackgroundColor(if (mode == "off") Color.parseColor("#4CAF50") else Color.DKGRAY)
+            btnBoxFilled?.setBackgroundColor(if (mode == "filled") Color.parseColor("#4CAF50") else Color.DKGRAY)
+            btnBoxPrecise?.setBackgroundColor(if (mode == "precise") Color.parseColor("#4CAF50") else Color.DKGRAY)
+        }
+
+        btnBoxOff?.setOnClickListener {
+            updateBoxUI("off")
+            Toast.makeText(this, "Bounding box: Off", Toast.LENGTH_SHORT).show()
+        }
+        btnBoxFilled?.setOnClickListener {
+            updateBoxUI("filled")
+            Toast.makeText(this, "Bounding box: Filled", Toast.LENGTH_SHORT).show()
+        }
+        btnBoxPrecise?.setOnClickListener {
+            updateBoxUI("precise")
+            Toast.makeText(this, "Bounding box: Precise", Toast.LENGTH_SHORT).show()
+        }
+        updateBoxUI("off") // الحالة الافتراضية
+
+        // --- مجموعة Radar line (Off / Top / Bottom) ---
+        val btnRadarOff = overlayView.findViewById<Button>(R.id.btnRadarOff)
+        val btnRadarTop = overlayView.findViewById<Button>(R.id.btnRadarTop)
+        val btnRadarBottom = overlayView.findViewById<Button>(R.id.btnRadarBottom)
+
+        fun updateRadarUI(mode: String) {
+            radarLineMode = mode
+            btnRadarOff?.setBackgroundColor(if (mode == "off") Color.parseColor("#4CAF50") else Color.DKGRAY)
+            btnRadarTop?.setBackgroundColor(if (mode == "top") Color.parseColor("#4CAF50") else Color.DKGRAY)
+            btnRadarBottom?.setBackgroundColor(if (mode == "bottom") Color.parseColor("#4CAF50") else Color.DKGRAY)
+        }
+
+        btnRadarOff?.setOnClickListener {
+            updateRadarUI("off")
+            Toast.makeText(this, "Radar line: Off", Toast.LENGTH_SHORT).show()
+        }
+        btnRadarTop?.setOnClickListener {
+            updateRadarUI("top")
+            Toast.makeText(this, "Radar line: Top", Toast.LENGTH_SHORT).show()
+        }
+        btnRadarBottom?.setOnClickListener {
+            updateRadarUI("bottom")
+            Toast.makeText(this, "Radar line: Bottom", Toast.LENGTH_SHORT).show()
+        }
+        updateRadarUI("off") // الحالة الافتراضية
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::overlayView.isInitialized) {
+            windowManager.removeView(overlayView)
         }
     }
 }
