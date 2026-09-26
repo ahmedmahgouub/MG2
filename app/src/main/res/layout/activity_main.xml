@@ -168,8 +168,8 @@
 
         </LinearLayout>
 
-        <!-- زر تشغيل الرادار -->
-        <Button
+        <!-- زر تشغيل الرادار (تم تحويله لـ LinearLayout قابل للضغط 100%) -->
+        <LinearLayout
             android:id="@+id/btnLaunchPanel"
             android:layout_width="match_parent"
             android:layout_height="56dp"
@@ -177,13 +177,19 @@
             android:background="@drawable/bg_main_button"
             android:clickable="true"
             android:focusable="true"
-            android:text="تشغيل الرادار"
-            android:textAllCaps="false"
-            android:textColor="@color/white"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:gravity="center"
+            android:orientation="horizontal">
 
-        <!-- مستطيل عرض نوع ورقم الكيرنل -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="تشغيل الرادار"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- مستطيل عرض رقم الكيرنل -->
         <TextView
             android:id="@+id/tvKernelVersion"
             android:layout_width="match_parent"
@@ -211,7 +217,7 @@
             android:orientation="horizontal"
             android:weightSum="2">
 
-            <Button
+            <LinearLayout
                 android:id="@+id/btnModeTurbo"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
@@ -220,13 +226,19 @@
                 android:background="@drawable/bg_segment_outline"
                 android:clickable="true"
                 android:focusable="true"
-                android:text="Kernel"
-                android:textAllCaps="false"
-                android:textColor="@color/white"
-                android:textSize="13sp"
-                android:textStyle="bold" />
+                android:gravity="center"
+                android:orientation="horizontal">
 
-            <Button
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Kernel"
+                    android:textColor="@color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
                 android:id="@+id/btnModeNormal"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
@@ -234,11 +246,17 @@
                 android:background="@drawable/bg_segment_filled"
                 android:clickable="true"
                 android:focusable="true"
-                android:text="Normal"
-                android:textAllCaps="false"
-                android:textColor="@color/white"
-                android:textSize="13sp"
-                android:textStyle="bold" />
+                android:gravity="center"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Normal"
+                    android:textColor="@color/white"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
         </LinearLayout>
 
@@ -272,7 +290,7 @@
         </LinearLayout>
 
         <!-- زر إيقاف الرادار -->
-        <Button
+        <LinearLayout
             android:id="@+id/btnStopPanel"
             android:layout_width="match_parent"
             android:layout_height="56dp"
@@ -280,11 +298,17 @@
             android:background="@drawable/bg_main_button"
             android:clickable="true"
             android:focusable="true"
-            android:text="إيقاف الرادار"
-            android:textAllCaps="false"
-            android:textColor="@color/white"
-            android:textSize="16sp"
-            android:textStyle="bold" />
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="إيقاف الرادار"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
     </LinearLayout>
 
