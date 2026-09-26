@@ -1,16 +1,24 @@
+
 package com.muhgoub.hud
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.graphics.PixelFormat
+import android.hardware.camera2.CameraAccessException
+import android.hardware.camera2.CameraManager
+import android.net.TrafficStats
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.provider.Settings
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
@@ -21,6 +29,8 @@ import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.NotificationCompat
+import java.net.InetAddress
+import kotlin.concurrent.thread
 import kotlin.math.abs
 
 class OverlayService : Service() {
@@ -51,7 +61,6 @@ class OverlayService : Service() {
 
         addBubbleView()
         addPanelView()
-
         setPanelVisible(prefs.isOverlayExpanded())
     }
 
@@ -82,10 +91,10 @@ class OverlayService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.panel_running))
+            .setContentText("اللوحة العائمة تعمل")
             .setSmallIcon(R.drawable.ic_notification)
             .setOngoing(true)
-            .addAction(0, getString(R.string.close_panel), stopPendingIntent)
+            .addAction(0, "إيقاف", stopPendingIntent)
             .build()
     }
 
@@ -179,29 +188,29 @@ class OverlayService : Service() {
     }
 
     private fun applyToggleStyle(button: Button, on: Boolean) {
-        val checkIcon = if (on) R.drawable.ic_check_on else R.drawable.ic_check_off
-        button.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, checkIcon, 0)
-        button.setBackgroundResource(if (on) R.drawable.bg_toggle_on else R.drawable.bg_toggle_off)
-        val textColorRes = if (on) R.color.bg_dark else R.color.text_primary
-        button.setTextColor(resources.getColor(textColorRes, theme))
+        if (on) {
+            button.setBackgroundColor(Color.parseColor("#4CAF50"))
+            button.setTextColor(Color.WHITE)
+        } else {
+            button.setBackgroundColor(Color.parseColor("#444444"))
+            button.setTextColor(Color.WHITE)
+        }
     }
 
     private fun bindControlGroups(root: View) {
-        // مجموع أزرار Bounding Box
         val boxButtons = mapOf(
             root.findViewById<Button>(R.id.btnBoxOff) to "off",
             root.findViewById<Button>(R.id.btnBoxFilled) to "filled",
             root.findViewById<Button>(R.id.btnBoxPrecise) to "precise"
         )
-        
+
         fun refreshBoxUI(selected: String) {
             boxButtons.forEach { (btn, value) ->
                 val active = (value == selected)
-                btn?.setBackgroundResource(if (active) R.drawable.bg_toggle_on else R.drawable.bg_toggle_off)
+                btn?.setBackgroundColor(if (active) Color.parseColor("#4CAF50") else Color.parseColor("#444444"))
             }
         }
-        
-        // افتراض قيمة أولية لو مش محفوظة
+
         val currentBox = prefs.getString("box_mode", "off")
         refreshBoxUI(currentBox)
         boxButtons.forEach { (btn, value) ->
@@ -212,7 +221,6 @@ class OverlayService : Service() {
             }
         }
 
-        // مجموع أزرار Radar Line
         val radarButtons = mapOf(
             root.findViewById<Button>(R.id.btnRadarOff) to "off",
             root.findViewById<Button>(R.id.btnRadarTop) to "top",
@@ -222,7 +230,7 @@ class OverlayService : Service() {
         fun refreshRadarUI(selected: String) {
             radarButtons.forEach { (btn, value) ->
                 val active = (value == selected)
-                btn?.setBackgroundResource(if (active) R.drawable.bg_toggle_on else R.drawable.bg_toggle_off)
+                btn?.setBackgroundColor(if (active) Color.parseColor("#4CAF50") else Color.parseColor("#444444"))
             }
         }
 
