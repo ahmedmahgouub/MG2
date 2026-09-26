@@ -24,7 +24,6 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.ImageButton
-import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.NotificationCompat
@@ -136,12 +135,6 @@ class OverlayService : Service() {
     private fun addPanelView() {
         val view = View.inflate(this, R.layout.overlay_panel, null)
 
-        // حجم النافذة الفعلي لازم يتحدد هنا في الكود (مش في XML) لأن أندرويد بيتجاهل
-        // مقاس عنصر الـ layout الجذري لما يكون داخل نافذة Overlay مضافة بـ WindowManager.
-        // العرض اتزوّد من 4 سم لـ 6 سم (زيادة النص) عشان محتوى القائمة (الأزرار
-        // في عمودين) ميبقاش زحمة. الطول فضل زي ما هو 6 سم. بنستخدم
-        // TypedValue.applyDimension مع COMPLEX_UNIT_MM (مش حساب dp يدوي تقريبي)
-        // عشان يطلع بالسنتيمتر الحقيقي على شاشة الجهاز فعليًا مهما اختلفت كثافتها.
         val panelWidthPx = cmToPx(6f)
         val panelHeightPx = cmToPx(6f)
 
@@ -198,26 +191,24 @@ class OverlayService : Service() {
     private fun applyToggleStyle(button: Button, on: Boolean) {
         val checkIcon = if (on) R.drawable.ic_check_on else R.drawable.ic_check_off
         button.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, checkIcon, 0)
-        // خلفية الشريحة بتتغير حسب حالة التفعيل (أخضر لو مفعّل، رمادي لو مقفول)
-        // بنفس منطق الشرايح المستخدمة تحت في قسم المحاذاة والحالة.
         button.setBackgroundResource(if (on) R.drawable.bg_toggle_on else R.drawable.bg_toggle_off)
-        // النص لازم يبقى غامق فوق الخلفية الخضراء الفاتحة عشان يفضل واضح ومقروء.
         val textColorRes = if (on) R.color.bg_dark else R.color.text_primary
         button.setTextColor(resources.getColor(textColorRes, theme))
     }
 
     private fun bindRadioGroups(root: View) {
-        // الـ 4 أزرار (Bottom/Mid/Top/Off) بقت في صفين منفصلين مش RadioGroup واحد
-        // (عشان اتصفوا صف فوق صف تحت في العرض الضيق)، فالتحديد المتبادل بينهم
-        // بيتعمل يدوي هنا بدل ما نعتمد على سلوك RadioGroup التلقائي.
+        // ربط أزرار المحاذاة (Radar line)
         val alignButtons = mapOf(
-            root.findViewById<android.widget.RadioButton>(R.id.rbAlignBottom) to "bottom",
-            root.findViewById<android.widget.RadioButton>(R.id.rbAlignMid) to "mid",
-            root.findViewById<android.widget.RadioButton>(R.id.rbAlignTop) to "top",
-            root.findViewById<android.widget.RadioButton>(R.id.rbAlignOff) to "off"
+            root.findViewById<Button>(R.id.rbAlignBottom) to "bottom",
+            root.findViewById<Button>(R.id.rbAlignMid) to "mid",
+            root.findViewById<Button>(R.id.rbAlignTop) to "top",
+            root.findViewById<Button>(R.id.rbAlignOff) to "off"
         )
         fun refreshAlignChecks(selected: String) {
-            alignButtons.forEach { (btn, value) -> btn.isChecked = (value == selected) }
+            alignButtons.forEach { (btn, value) -> 
+                val isSelected = (value == selected)
+                applyToggleStyle(btn, isSelected)
+            }
         }
         refreshAlignChecks(prefs.getCoreAlign())
         alignButtons.forEach { (btn, value) ->
@@ -228,18 +219,25 @@ class OverlayService : Service() {
             }
         }
 
-        val statusGroup = root.findViewById<RadioGroup>(R.id.radioStatus)
-        val idToStatus = mapOf(
-            R.id.rbStatusPrcs to "prcs",
-            R.id.rbStatusFill to "fill",
-            R.id.rbStatusOff to "off"
+        // ربط أزرار الـ Bounding box الجديدة (بدلاً من RadioGroup القديم)
+        val statusButtons = mapOf(
+            root.findViewById<Button>(R.id.rbStatusPrcs) to "prcs",
+            root.findViewById<Button>(R.id.rbStatusFill) to "fill",
+            root.findViewById<Button>(R.id.rbStatusOff) to "off"
         )
-        val statusToId = idToStatus.entries.associate { (k, v) -> v to k }
-        statusGroup.check(statusToId[prefs.getStatusMode()] ?: R.id.rbStatusFill)
-        statusGroup.setOnCheckedChangeListener { _, checkedId ->
-            val value = idToStatus[checkedId] ?: return@setOnCheckedChangeListener
-            prefs.setStatusMode(value)
-            applyStatusMode(root, value)
+        fun refreshStatusChecks(selected: String) {
+            statusButtons.forEach { (btn, value) ->
+                val isSelected = (value == selected)
+                applyToggleStyle(btn, isSelected)
+            }
+        }
+        refreshStatusChecks(prefs.getStatusMode())
+        statusButtons.forEach { (btn, value) ->
+            btn.setOnClickListener {
+                prefs.setStatusMode(value)
+                refreshStatusChecks(value)
+                applyStatusMode(root, value)
+            }
         }
     }
 
@@ -288,8 +286,6 @@ class OverlayService : Service() {
 
     private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
 
-    // تحويل دقيق من سنتيمتر لبكسل عن طريق نظام الوحدات الرسمي في أندرويد
-    // (COMPLEX_UNIT_MM بيستقبل مللي، فبنضرب السنتيمتر في 10).
     private fun cmToPx(cm: Float): Int =
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_MM, cm * 10f, resources.displayMetrics).toInt()
 
@@ -416,19 +412,6 @@ class OverlayService : Service() {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
-    // -----------------------------------------------------------------
-    // نظام السحب واللمس (Drag & Touch)
-    //
-    // ملاحظة مهمة عن سبب انعكاس اتجاه السحب:
-    // نوافذ الـ Overlay بتستخدم WindowManager.LayoutParams، واللي فيها قيمة "y"
-    // بتتحسب كمسافة (offset) من الحافة اللي بيحددها الـ gravity، مش من أعلى الشاشة دايمًا.
-    // فلو الـ gravity كان Gravity.BOTTOM (وهو الوضع الافتراضي عندنا)، زيادة y بتبعد
-    // العنصر عن أسفل الشاشة (يعني تحركه لفوق)، ونقصانها بيقربه من الأسفل (يحركه لتحت).
-    // ده عكس المنطق اللي كان مكتوب قبل كده واللي كان بيفترض إن الشاشة دايمًا محسوبة من فوق،
-    // فكانت الحركة بتطلع معكوسة بالظبط زي ما لاحظت.
-    // الحل: بنحسب "اتجاه" حركة الـ Y (verticalSign) حسب الـ gravity الحالي، وبنضربه
-    // في الفرق dy، عشان الفقاعة/البانل يتبعوا إصبعك بالظبط في أي وضع محاذاة (فوق / نص / تحت).
-    // -----------------------------------------------------------------
     private inner class DragTapListener(
         private val params: WindowManager.LayoutParams,
         private val onTap: (Boolean) -> Unit
@@ -458,7 +441,6 @@ class OverlayService : Service() {
                         moved = true
                     }
 
-                    // إشارة الاتجاه الرأسي: تتعكس فقط لو المحاذاة الحالية سفلية (Gravity.BOTTOM)
                     val verticalSign = if ((params.gravity and Gravity.BOTTOM) == Gravity.BOTTOM) -1 else 1
 
                     params.x = initialX + dx
