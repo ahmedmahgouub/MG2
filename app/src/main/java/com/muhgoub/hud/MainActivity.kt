@@ -1,4 +1,4 @@
-package com.yourpackage.name; // استبدل هذا باسم الحزمة الخاص بك
+package com.muhgoub.hud;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -23,8 +23,8 @@ public class MainActivity extends AppCompatActivity {
     private Button btnModeNormal, btnModeTurbo;
     private TextView tvMahgoub;
     private Switch switchPermission;
-    private boolean isKernelActive = false; // حالة زر الكيرنال (تشغيل/إيقاف)
-    private boolean hasRequestedNormalPermissions = false; // لمنع تكرار طلب الصلاحيات مع نورمال
+    private boolean isKernelActive = false;
+    private boolean hasRequestedNormalPermissions = false;
 
     private static final String CHANNEL_ID = "radar_channel_id";
     private static final int NOTIFICATION_ID = 1001;
@@ -33,7 +33,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // الانتقال التلقائي لإذن العرض فوق التطبيقات عند أول فتح
         checkOverlayPermission();
 
         setContentView(R.layout.activity_main);
@@ -45,7 +44,6 @@ public class MainActivity extends AppCompatActivity {
 
         createNotificationChannel();
 
-        // زر Normal: طلب الروت وإظهار الإشعار "مرة واحدة فقط"
         btnModeNormal.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -61,7 +59,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // زر Kernel (Turbo): نظام تبديل Toggle (ضغط أولى يعرض الكيرنال، ضغطة ثانية يقفله)
         btnModeTurbo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -89,7 +86,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // دالة التحقق من إذن العرض فوق التطبيقات
     private void checkOverlayPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (!Settings.canDrawOverlays(this)) {
@@ -101,7 +97,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // دالة طلب صلاحيات الروت والإشعار (تُنفذ مرة واحدة)
     private void requestRootAndShowNotification() {
         try {
             Process process = Runtime.getRuntime().exec(new String[]{"su", "-c", "id"});
@@ -117,7 +112,6 @@ public class MainActivity extends AppCompatActivity {
         showRunningNotification();
     }
 
-    // إشعار التشغيل
     private void showRunningNotification() {
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         
@@ -133,7 +127,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // قناة الإشعارات
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CharSequence name = "Radar Channel";
@@ -149,7 +142,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // جلب إصدار الكيرنال
     private String getKernelVersion() {
         try {
             Process p = Runtime.getRuntime().exec("uname -r");
