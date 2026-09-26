@@ -21,12 +21,7 @@
         android:orientation="vertical"
         android:padding="12dp">
 
-    <!-- الهيدر العلوي: لوجو + عنوان + مؤشر حالة + زر إغلاق/تصغير.
-         اتحول لـ FrameLayout عشان كلمة "MUHGOUB" تتحط في نص عرض القائمة
-         العايمة بالظبط (منتصف هندسي حقيقي)، مش نص المسافة المتبقية بعد
-         اللوجو والأزرار زي ما كان قبل كده. النص بياخد عرض الهيدر بالكامل
-         ويتمركز فيه، واللوجو ومؤشر الحالة وزرار الإغلاق بيترسموا فوقه في
-         طبقة تانية شفافة من غير ما يأثروا على تمركز النص. -->
+    <!-- الهيدر العلوي: لوجو + عنوان + مؤشر حالة + زر إغلاق/تصغير -->
     <FrameLayout
         android:id="@+id/dragHandle"
         android:layout_width="match_parent"
@@ -77,9 +72,7 @@
 
     </FrameLayout>
 
-    <!-- شبكة أزرار الأدوات الـ 12: عمودين × 6 صفوف (6 جمب 6). القائمة بقى عرضها
-         6 سم بدل 4 سم عشان ميبقاش المكان زحمة، وكل زرار بقى شكله "شريحة"
-         (chip) بخلفية أخضر/رمادي حسب حالة التفعيل. -->
+    <!-- شبكة أزرار الأدوات الـ 12 بالأسماء الجديدة المخصصة -->
     <GridLayout
         android:id="@+id/gridTools"
         android:layout_width="match_parent"
@@ -87,18 +80,18 @@
         android:columnCount="2"
         android:rowCount="6">
 
-        <Button android:id="@+id/btnTool0" style="@style/HudToggleButton" android:text="رقم 1" />
-        <Button android:id="@+id/btnTool1" style="@style/HudToggleButton" android:text="رقم 2" />
-        <Button android:id="@+id/btnTool2" style="@style/HudToggleButton" android:text="رقم 3" />
-        <Button android:id="@+id/btnTool3" style="@style/HudToggleButton" android:text="رقم 4" />
-        <Button android:id="@+id/btnTool4" style="@style/HudToggleButton" android:text="رقم 5" />
-        <Button android:id="@+id/btnTool5" style="@style/HudToggleButton" android:text="رقم 6" />
-        <Button android:id="@+id/btnTool6" style="@style/HudToggleButton" android:text="رقم 7" />
-        <Button android:id="@+id/btnTool7" style="@style/HudToggleButton" android:text="رقم 8" />
-        <Button android:id="@+id/btnTool8" style="@style/HudToggleButton" android:text="رقم 9" />
-        <Button android:id="@+id/btnTool9" style="@style/HudToggleButton" android:text="رقم 10" />
-        <Button android:id="@+id/btnTool10" style="@style/HudToggleButton" android:text="الحبل" />
-        <Button android:id="@+id/btnTool11" style="@style/HudToggleButton" android:text="تم" />
+        <Button android:id="@+id/btnTool0" style="@style/HudToggleButton" android:text="إطار الأعداء" />
+        <Button android:id="@+id/btnTool1" style="@style/HudToggleButton" android:text="شريط الصحة" />
+        <Button android:id="@+id/btnTool2" style="@style/HudToggleButton" android:text="أسماء اللاعبين" />
+        <Button android:id="@+id/btnTool3" style="@style/HudToggleButton" android:text="المسافة" />
+        <Button android:id="@+id/btnTool4" style="@style/HudToggleButton" android:text="الهيكل العظمي" />
+        <Button android:id="@+id/btnTool5" style="@style/HudToggleButton" android:text="نقطة الرأس" />
+        <Button android:id="@+id/btnTool6" style="@style/HudToggleButton" android:text="السلاح المستخدم" />
+        <Button android:id="@+id/btnTool7" style="@style/HudToggleButton" android:text="خطوط الرادار" />
+        <Button android:id="@+id/btnTool8" style="@style/HudToggleButton" android:text="تحذير القنابل" />
+        <Button android:id="@+id/btnTool9" style="@style/HudToggleButton" android:text="تنبيه الحواف" />
+        <Button android:id="@+id/btnTool10" style="@style/HudToggleButton" android:text="التصويب الآلي" />
+        <Button android:id="@+id/btnTool11" style="@style/HudToggleButton" android:text="عداد الأعداء" />
 
     </GridLayout>
 
@@ -110,9 +103,7 @@
         android:layout_marginBottom="6dp"
         android:background="#22FFFFFF" />
 
-    <!-- قسم محاذاة الأساسيات (Core Alignment): صفين X2 بدل صف واحد X4 عشان يتسع في العرض الضيق.
-         مش RadioGroup عادي (عشان أندرويد ميدعمش RadioGroup ملفوف على أكتر من سطر)،
-         التحديد المتبادل بين الأربعة بيتعمل يدوي في OverlayService.kt -->
+    <!-- قسم محاذاة الأساسيات (Core Alignment) -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
