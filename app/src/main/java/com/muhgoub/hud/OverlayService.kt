@@ -46,6 +46,8 @@ class OverlayService : Service() {
 
     private var bubbleView: View? = null
     private var panelView: View? = null
+    private var espView: ESPView? = null // طبقة الرسم الجديدة الخاصة بالكاشف
+    
     private var bubbleParams: WindowManager.LayoutParams? = null
     private var panelParams: WindowManager.LayoutParams? = null
 
@@ -60,6 +62,7 @@ class OverlayService : Service() {
 
         addBubbleView()
         addPanelView()
+        addEspView() // إضافة طبقة الكاشف للشاشة
 
         applyCoreAlign(prefs.getCoreAlign())
         setPanelVisible(prefs.isOverlayExpanded())
@@ -75,6 +78,7 @@ class OverlayService : Service() {
     override fun onDestroy() {
         bubbleView?.let { runCatching { windowManager.removeView(it) } }
         panelView?.let { runCatching { windowManager.removeView(it) } }
+        espView?.let { runCatching { windowManager.removeView(it) } } // إزالة طبقة الكاشف عند الإيقاف
         super.onDestroy()
     }
 
@@ -122,6 +126,31 @@ class OverlayService : Service() {
         windowManager.addView(view, params)
         bubbleView = view
         bubbleParams = params
+    }
+
+    // دالة إنشاء وإضافة طبقة الكاشف (ESPView) الشفافة فوق اللعبة
+    private fun addEspView() {
+        espView = ESPView(this)
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            overlayWindowType(),
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = 0
+            y = 0
+        }
+
+        try {
+            windowManager.addView(espView, params)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun togglePanelVisibility() {
@@ -451,7 +480,7 @@ class OverlayService : Service() {
                 MotionEvent.ACTION_UP -> {
                     prefs.setOverlayPosition(params.x, params.y)
                     onTap(!moved)
-                    return true
+                    return typeTrue()
                 }
             }
             return false
