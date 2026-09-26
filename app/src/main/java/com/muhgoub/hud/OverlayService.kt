@@ -1,30 +1,29 @@
+
 package com.muhgoub.hud
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.ImageButton
+import android.widget.RadioButton
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import kotlin.math.abs
 
-class OverlayService : Service() {
+class OverlayService : android.app.Service() {
 
     companion object {
         private const val CHANNEL_ID = "muhgoub_hud_channel"
@@ -35,14 +34,13 @@ class OverlayService : Service() {
     private lateinit var windowManager: WindowManager
     private lateinit var prefs: PrefsManager
     private lateinit var rawPrefs: SharedPreferences
-    private val mainHandler = Handler(Looper.getMainLooper())
 
     private var bubbleView: View? = null
     private var panelView: View? = null
     private var bubbleParams: WindowManager.LayoutParams? = null
     private var panelParams: WindowManager.LayoutParams? = null
 
-    private val toggleButtons = arrayOfNulls<Button>(12)
+    private val toolCheckboxes = arrayOfNulls<CheckBox>(12)
 
     override fun onCreate() {
         super.onCreate()
@@ -74,7 +72,7 @@ class OverlayService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NotificationManager::class.java)
             val channel = NotificationChannel(
-                CHANNEL_ID, getString(R.string.app_name), NotificationManager.IMPORTANCE_LOW
+                CHANNEL_ID, "MUHGOUB HUD", NotificationManager.IMPORTANCE_LOW
             )
             manager.createNotificationChannel(channel)
         }
@@ -83,7 +81,7 @@ class OverlayService : Service() {
             this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(getString(R.string.app_name))
+            .setContentTitle("MUHGOUB HUD")
             .setContentText("اللوحة العائمة تعمل")
             .setSmallIcon(R.drawable.ic_notification)
             .setOngoing(true)
@@ -128,8 +126,8 @@ class OverlayService : Service() {
     private fun addPanelView() {
         val view = View.inflate(this, R.layout.overlay_panel, null)
 
-        val panelWidthPx = cmToPx(6f)
-        val panelHeightPx = cmToPx(6f)
+        val panelWidthPx = cmToPx(6.5f)
+        val panelHeightPx = cmToPx(7f)
 
         val params = WindowManager.LayoutParams(
             panelWidthPx,
@@ -151,15 +149,19 @@ class OverlayService : Service() {
             setPanelVisible(false)
         }
 
-        bindToolButtons(view)
-        bindControlGroups(view)
+        view.findViewById<Button>(R.id.btnStopService)?.setOnClickListener {
+            stopSelf()
+        }
+
+        bindToolCheckboxes(view)
+        bindRadioGroups(view)
 
         windowManager.addView(view, params)
         panelView = view
         panelParams = params
     }
 
-    private fun bindToolButtons(root: View) {
+    private fun bindToolCheckboxes(root: View) {
         val ids = intArrayOf(
             R.id.btnTool0, R.id.btnTool1, R.id.btnTool2, R.id.btnTool3,
             R.id.btnTool4, R.id.btnTool5, R.id.btnTool6, R.id.btnTool7,
@@ -167,72 +169,47 @@ class OverlayService : Service() {
         )
 
         for (i in ids.indices) {
-            val button = root.findViewById<Button>(ids[i])
-            toggleButtons[i] = button
-            applyToggleStyle(button, prefs.isToolOn(i))
+            val checkBox = root.findViewById<CheckBox>(ids[i])
+            toolCheckboxes[i] = checkBox
+            checkBox?.isChecked = prefs.isToolOn(i)
 
-            button.setOnClickListener {
-                val newState = !prefs.isToolOn(i)
-                prefs.setToolOn(i, newState)
-                applyToggleStyle(button, newState)
-                performToolAction(i, newState)
+            checkBox?.setOnCheckedChangeListener { _, isChecked ->
+                prefs.setToolOn(i, isChecked)
+                performToolAction(i, isChecked)
             }
         }
     }
 
-    private fun applyToggleStyle(button: Button, on: Boolean) {
-        if (on) {
-            button.setBackgroundColor(Color.parseColor("#4CAF50"))
-            button.setTextColor(Color.WHITE)
-        } else {
-            button.setBackgroundColor(Color.parseColor("#444444"))
-            button.setTextColor(Color.WHITE)
-        }
-    }
-
-    private fun bindControlGroups(root: View) {
+    private fun bindRadioGroups(root: View) {
         val boxButtons = mapOf(
-            root.findViewById<Button>(R.id.btnBoxOff) to "off",
-            root.findViewById<Button>(R.id.btnBoxFilled) to "filled",
-            root.findViewById<Button>(R.id.btnBoxPrecise) to "precise"
+            root.findViewById<RadioButton>(R.id.btnBoxOff) to "off",
+            root.findViewById<RadioButton>(R.id.btnBoxFilled) to "filled",
+            root.findViewById<RadioButton>(R.id.btnBoxPrecise) to "precise"
         )
 
-        fun refreshBoxUI(selected: String) {
-            boxButtons.forEach { (btn, value) ->
-                val active = (value == selected)
-                btn?.setBackgroundColor(if (active) Color.parseColor("#4CAF50") else Color.parseColor("#444444"))
-            }
-        }
-
         val currentBox = rawPrefs.getString("box_mode", "off") ?: "off"
-        refreshBoxUI(currentBox)
         boxButtons.forEach { (btn, value) ->
+            btn?.isChecked = (value == currentBox)
             btn?.setOnClickListener {
                 rawPrefs.edit().putString("box_mode", value).apply()
-                refreshBoxUI(value)
+                boxButtons.keys.forEach { it?.isChecked = (it == btn) }
                 toast("Bounding Box: $value")
             }
         }
 
         val radarButtons = mapOf(
-            root.findViewById<Button>(R.id.btnRadarOff) to "off",
-            root.findViewById<Button>(R.id.btnRadarTop) to "top",
-            root.findViewById<Button>(R.id.btnRadarBottom) to "bottom"
+            root.findViewById<RadioButton>(R.id.btnRadarOff) to "off",
+            root.findViewById<RadioButton>(R.id.btnRadarTop) to "top",
+            root.findViewById<RadioButton>(R.id.btnRadarCenter) to "center",
+            root.findViewById<RadioButton>(R.id.btnRadarBottom) to "bottom"
         )
 
-        fun refreshRadarUI(selected: String) {
-            radarButtons.forEach { (btn, value) ->
-                val active = (value == selected)
-                btn?.setBackgroundColor(if (active) Color.parseColor("#4CAF50") else Color.parseColor("#444444"))
-            }
-        }
-
         val currentRadar = rawPrefs.getString("radar_mode", "off") ?: "off"
-        refreshRadarUI(currentRadar)
         radarButtons.forEach { (btn, value) ->
+            btn?.isChecked = (value == currentRadar)
             btn?.setOnClickListener {
                 rawPrefs.edit().putString("radar_mode", value).apply()
-                refreshRadarUI(value)
+                radarButtons.keys.forEach { it?.isChecked = (it == btn) }
                 toast("Radar Line: $value")
             }
         }
