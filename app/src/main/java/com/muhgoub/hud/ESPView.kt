@@ -56,16 +56,26 @@ class ESPView(context: Context) : View(context) {
                     if (libBase != 0L) {
                         statusMessage = "PID: $currentPid | LIVE"
                         
-                        // 1. قراءة الـ ViewMatrix الفعلية بإضافة الـ Offset الخاص بالنسخة (يتم تعديل الـ Offset حسب التحديث الحالي)
-                        // val matrixOffset = 0x00000000L
-                        // viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + matrixOffset)
+                        // ==========================================
+                        // ضع هنا أوفسيت الـ ViewMatrix الخاص بنسختك الحالية
+                        // ==========================================
+                        val matrixOffset = 0x0L // استبدل الصفر بالأوفسيت الحقيقي للمصفوفة
+                        if (matrixOffset != 0L) {
+                            viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + matrixOffset)
+                        }
 
-                        // 2. تحديث قائمة الكائنات (Entity Loop) وقراءة إحداثيات الأعداء وحفظها في playerList
+                        // ==========================================
+                        // قراءة قائمة الكائنات والأعداء (Entity List)
+                        // ==========================================
                         synchronized(playerList) {
                             playerList.clear()
-                            // مثال لإضافة إحداثيات يتم جلبها من الذاكرة عبر MemoryUtils.readVector3
-                            // val enemyPos = MemoryUtils.readVector3(currentPid, enemyAddress)
-                            // if (enemyPos.x != 0f) playerList.add(enemyPos)
+                            
+                            // مثال لقراءة إحداثيات لاعب عبر مؤشر (Pointer) الأوفسيت الخاص بك:
+                            // val entityListOffset = 0x0L
+                            // val worldBase = MemoryUtils.readLong(currentPid, libBase + entityListOffset)
+                            // هنا يتم إضافة حلقة لوب لجلب إحداثيات كل لاعب وحفظها:
+                            // val pos = MemoryUtils.readVector3(currentPid, playerAddress)
+                            // if (pos.x != 0f) playerList.add(pos)
                         }
                     } else {
                         statusMessage = "PID: $currentPid | WAITING FOR LIB..."
@@ -74,7 +84,7 @@ class ESPView(context: Context) : View(context) {
                     statusMessage = "WAITING FOR PUBG..."
                 }
 
-                withContext(Dispatchers.Main) {
+                    withContext(Dispatchers.Main) {
                     invalidate()
                 }
                 delay(25L)
@@ -87,23 +97,6 @@ class ESPView(context: Context) : View(context) {
 
         // رسم الحالة وعنوان الأساس أعلى الشاشة
         canvas.drawText(statusMessage, 50f, 150f, textPaint)
-
-        // رسم الصندوق التجريبي للتأكد من استقرار الإطارات
-        val dummyWorldPos = MemoryUtils.Vector3(0f, 250f, 50f)
-        val testMatrix = FloatArray(16) { 1f }.apply {
-            this[0] = 1f; this[5] = 1f; this[10] = 1f; this[15] = 1f
-        }
-
-        val screenPoint = MemoryUtils.worldToScreen(dummyWorldPos, testMatrix, width, height)
-        if (screenPoint.isValid) {
-            val left = screenPoint.x - 45f
-            val top = screenPoint.y - 110f
-            val right = screenPoint.x + 45f
-            val bottom = screenPoint.y + 110f
-            
-            canvas.drawRect(left, top, right, bottom, boxPaint)
-            canvas.drawText("Test Box [OK]", left, top - 10f, textPaint)
-        }
 
         // رسم الأعداء الحقيقيين فور امتلاء القائمة بالإحداثيات
         synchronized(playerList) {
