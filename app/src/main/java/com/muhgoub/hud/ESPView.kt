@@ -18,18 +18,26 @@ class ESPView(context: Context) : View(context) {
 
     private val textPaint = Paint().apply {
         color = Color.GREEN
-        textSize = 30f
+        textSize = 28f
         isAntiAlias = true
         setShadowLayer(4f, 0f, 0f, Color.BLACK)
     }
 
+    private val enemyBoxPaint = Paint().apply {
+        color = Color.RED
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        isAntiAlias = true
+    }
+
     private var scope: CoroutineScope? = null
     private var isRunning = false
-    private var statusMessage = "MUHGOUB ESP - INITIALIZED"
+    private var statusMessage = "MUHGOUB ESP - SCANNING"
     private var currentPid = -1
     
-    // مصفوفة الكاميرا الحقيقية
+    // مصفوفة الكاميرا وحفظ إحداثيات اللاعبين المؤقتة
     private var viewMatrix = FloatArray(16)
+    private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
     init {
         startLoop()
@@ -44,12 +52,16 @@ class ESPView(context: Context) : View(context) {
                 currentPid = MemoryUtils.findProcessId("com.tencent.ig")
                 
                 if (currentPid != -1) {
-                    statusMessage = "PUBG PID: $currentPid | ACTIVE"
+                    statusMessage = "PUBG PID: $currentPid | LIVE"
                     
-                    // ملاحظة: هنا بنحدد عنوان الـ ViewMatrix الخاص بنسخة اللعبة (يتم تحديث العنوان حسب كل التحديث)
-                    // مثال توضيحي لقراءة المصفوفة:
+                    // 1. قراءة الـ ViewMatrix الفعلية من الذاكرة (يتم تحديث العنوان حسب كل إصدار لعبة)
                     // viewMatrix = MemoryUtils.readMatrix(currentPid, 0x00000000L)
-                    
+
+                    // 2. تحديث قائمة الكائنات (Entity Loop) لجلب إحداثيات الأعداء الحقيقيين
+                    synchronized(playerList) {
+                        playerList.clear()
+                        // هنا يتم جلب الإحداثيات وحفظها في الـ playerList برمجياً
+                    }
                 } else {
                     statusMessage = "WAITING FOR PUBG..."
                 }
@@ -57,7 +69,7 @@ class ESPView(context: Context) : View(context) {
                 withContext(Dispatchers.Main) {
                     invalidate()
                 }
-                delay(30L) // تحديث مستمر وسلس للإطارات
+                delay(25L) // تحديث فائق السلاسة للإطارات
             }
         }
     }
@@ -65,27 +77,39 @@ class ESPView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // رسم حالة الكاشف والـ PID أعلى الشاشة
+        // رسم الحالة أعلى الشاشة
         canvas.drawText(statusMessage, 50f, 150f, textPaint)
 
-        // تجربة إسقاط إحداثي تجريبي عبر الـ WorldToScreen للتأكد من سلاسة الرسم
-        // لاحقاً هنا سيتم جلب إحداثيات كل لاعب حقيقي واللف عليها برمجياً
-        val dummyWorldPos = MemoryUtils.Vector3(0f, 300f, 50f)
-        
-        // مصفوفة افتراضية مبدئية للاختبار لو الـ ViewMatrix لسه مجاش عناوينه
-        val testMatrix = FloatArray(16) { 1f }
-        testMatrix[0] = 1f; testMatrix[5] = 1f; testMatrix[10] = 1f; testMatrix[15] = 1f
+        // رسم صندوق تجريبي للتأكد من استقرار الإطارات
+        val dummyWorldPos = MemoryUtils.Vector3(0f, 250f, 50f)
+        val testMatrix = FloatArray(16) { 1f }.apply {
+            this[0] = 1f; this[5] = 1f; this[10] = 1f; this[15] = 1f
+        }
 
         val screenPoint = MemoryUtils.worldToScreen(dummyWorldPos, testMatrix, width, height)
-
         if (screenPoint.isValid) {
-            val left = screenPoint.x - 40f
-            val top = screenPoint.y - 100f
-            val right = screenPoint.x + 40f
-            val bottom = screenPoint.y + 100f
+            val left = screenPoint.x - 45f
+            val top = screenPoint.y - 110f
+            val right = screenPoint.x + 45f
+            val bottom = screenPoint.y + 110f
             
             canvas.drawRect(left, top, right, bottom, boxPaint)
-            canvas.drawText("Target [ESP]", left, top - 10f, textPaint)
+            canvas.drawText("Test Box [OK]", left, top - 10f, textPaint)
+        }
+
+        // رسم الأعداء الحقيقيين فور امتلاء القائمة بالإحداثيات
+        synchronized(playerList) {
+            for (player in playerList) {
+                val pt = MemoryUtils.worldToScreen(player, viewMatrix, width, height)
+                if (pt.isValid) {
+                    val l = pt.x - 40f
+                    val t = pt.y - 100f
+                    val r = pt.x + 40f
+                    val b = pt.y + 100f
+                    canvas.drawRect(l, t, r, b, enemyBoxPaint)
+                    canvas.drawText("Enemy", l, t - 8f, textPaint)
+                }
+            }
         }
     }
 
