@@ -56,10 +56,17 @@ class ESPView(context: Context) : View(context) {
                     if (libBase != 0L) {
                         statusMessage = "PID: $currentPid | LIVE"
                         
-                        // قراءة الـ ViewMatrix الحقيقية بإضافة الـ Offset الخاص بالنسخة
-                        // val matrixOffset = 0xYOUR_OFFSET_HERE
+                        // 1. قراءة الـ ViewMatrix الفعلية بإضافة الـ Offset الخاص بالنسخة (يتم تعديل الـ Offset حسب التحديث الحالي)
+                        // val matrixOffset = 0x00000000L
                         // viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + matrixOffset)
-                        
+
+                        // 2. تحديث قائمة الكائنات (Entity Loop) وقراءة إحداثيات الأعداء وحفظها في playerList
+                        synchronized(playerList) {
+                            playerList.clear()
+                            // مثال لإضافة إحداثيات يتم جلبها من الذاكرة عبر MemoryUtils.readVector3
+                            // val enemyPos = MemoryUtils.readVector3(currentPid, enemyAddress)
+                            // if (enemyPos.x != 0f) playerList.add(enemyPos)
+                        }
                     } else {
                         statusMessage = "PID: $currentPid | WAITING FOR LIB..."
                     }
@@ -81,7 +88,7 @@ class ESPView(context: Context) : View(context) {
         // رسم الحالة وعنوان الأساس أعلى الشاشة
         canvas.drawText(statusMessage, 50f, 150f, textPaint)
 
-        // رسم صندوق تجريبي للتأكد من استقرار الإطارات
+        // رسم الصندوق التجريبي للتأكد من استقرار الإطارات
         val dummyWorldPos = MemoryUtils.Vector3(0f, 250f, 50f)
         val testMatrix = FloatArray(16) { 1f }.apply {
             this[0] = 1f; this[5] = 1f; this[10] = 1f; this[15] = 1f
