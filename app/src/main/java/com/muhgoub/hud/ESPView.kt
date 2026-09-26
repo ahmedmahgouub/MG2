@@ -54,7 +54,12 @@ class ESPView(context: Context) : View(context) {
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        statusMessage = "PID: $currentPid | BASE: 0x${java.lang.Long.toHexString(libBase)}"
+                        statusMessage = "PID: $currentPid | LIVE"
+                        
+                        // قراءة الـ ViewMatrix الحقيقية بإضافة الـ Offset الخاص بالنسخة
+                        // val matrixOffset = 0xYOUR_OFFSET_HERE
+                        // viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + matrixOffset)
+                        
                     } else {
                         statusMessage = "PID: $currentPid | WAITING FOR LIB..."
                     }
@@ -73,8 +78,10 @@ class ESPView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
+        // رسم الحالة وعنوان الأساس أعلى الشاشة
         canvas.drawText(statusMessage, 50f, 150f, textPaint)
 
+        // رسم صندوق تجريبي للتأكد من استقرار الإطارات
         val dummyWorldPos = MemoryUtils.Vector3(0f, 250f, 50f)
         val testMatrix = FloatArray(16) { 1f }.apply {
             this[0] = 1f; this[5] = 1f; this[10] = 1f; this[15] = 1f
@@ -91,6 +98,7 @@ class ESPView(context: Context) : View(context) {
             canvas.drawText("Test Box [OK]", left, top - 10f, textPaint)
         }
 
+        // رسم الأعداء الحقيقيين فور امتلاء القائمة بالإحداثيات
         synchronized(playerList) {
             for (player in playerList) {
                 val pt = MemoryUtils.worldToScreen(player, viewMatrix, width, height)
