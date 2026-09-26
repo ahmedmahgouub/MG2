@@ -2,6 +2,8 @@ package com.muhgoub.hud
 
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
 object MemoryUtils {
 
@@ -24,7 +26,7 @@ object MemoryUtils {
     data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
     data class Vector3(val x: Float, val y: Float, val z: Float)
 
-    // دالة قراءة الذاكرة عبر الروت باستخدام أداة dd لمسح العنوان المطلوب بدقة
+    // قراءة قيمة Float من الذاكرة عبر dd والروت
     fun readFloat(pid: Int, address: Long): Float {
         try {
             val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=4 2>/dev/null"
@@ -34,14 +36,37 @@ object MemoryUtils {
             val bytesRead = inputStream.read(buffer)
             process.waitFor()
             if (bytesRead == 4) {
-                return java.nio.ByteBuffer.wrap(buffer)
-                    .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                return ByteBuffer.wrap(buffer)
+                    .order(ByteOrder.LITTLE_ENDIAN)
                     .float
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
         return 0f
+    }
+
+    // قراءة مصفوفة كاملة (مثلاً ViewMatrix مكونة من 16 قيمة Float)
+    fun readMatrix(pid: Int, address: Long): FloatArray {
+        val matrix = FloatArray(16)
+        try {
+            val byteCount = 16 * 4 // 16 floats * 4 bytes
+            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=$byteCount 2>/dev/null"
+            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
+            val inputStream = process.inputStream
+            val buffer = ByteArray(byteCount)
+            val bytesRead = inputStream.read(buffer)
+            process.waitFor()
+            if (bytesRead == byteCount) {
+                val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN)
+                for (i in 0 until 16) {
+                    matrix[i] = byteBuffer.float
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return matrix
     }
 
     // معادلة تحويل الإحداثيات من 3D إلى 2D
