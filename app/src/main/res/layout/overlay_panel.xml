@@ -72,7 +72,7 @@
 
     </FrameLayout>
 
-    <!-- شبكة أزرار الأدوات الـ 12 بالأسماء الجديدة المخصصة -->
+    <!-- شبكة أزرار الأدوات الرئيسية (متضمنة زر رقم الفريق) -->
     <GridLayout
         android:id="@+id/gridTools"
         android:layout_width="match_parent"
@@ -90,8 +90,7 @@
         <Button android:id="@+id/btnTool7" style="@style/HudToggleButton" android:text="خطوط الرادار" />
         <Button android:id="@+id/btnTool8" style="@style/HudToggleButton" android:text="تحذير القنابل" />
         <Button android:id="@+id/btnTool9" style="@style/HudToggleButton" android:text="تنبيه الحواف" />
-        <Button android:id="@+id/btnTool10" style="@style/HudToggleButton" android:text="التصويب الآلي" />
-        <Button android:id="@+id/btnTool11" style="@style/HudToggleButton" android:text="عداد الأعداء" />
+        <Button android:id="@+id/btnTool10" style="@style/HudToggleButton" android:text="رقم الفريق" />
 
     </GridLayout>
 
@@ -103,11 +102,11 @@
         android:layout_marginBottom="6dp"
         android:background="#22FFFFFF" />
 
-    <!-- قسم محاذاة الأساسيات (Core Alignment) -->
+    <!-- قسم Bounding box -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/section_core_align"
+        android:text="Bounding box"
         android:textColor="@color/text_secondary"
         android:textSize="10sp"
         android:textStyle="bold" />
@@ -116,53 +115,37 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
-        android:orientation="vertical">
+        android:orientation="horizontal">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <RadioButton android:id="@+id/rbAlignBottom" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/align_bottom" />
-            <RadioButton android:id="@+id/rbAlignMid" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/align_mid" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:orientation="horizontal">
-
-            <RadioButton android:id="@+id/rbAlignTop" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/align_top" />
-            <RadioButton android:id="@+id/rbAlignOff" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/align_off" />
-
-        </LinearLayout>
+        <Button android:id="@+id/rbStatusPrcs" style="@style/HudToggleButton" android:layout_width="0dp" android:layout_weight="1" android:text="Precise" />
+        <Button android:id="@+id/rbStatusFill" style="@style/HudToggleButton" android:layout_width="0dp" android:layout_weight="1" android:text="Filled" />
+        <Button android:id="@+id/rbStatusOff" style="@style/HudToggleButton" android:layout_width="0dp" android:layout_weight="1" android:text="Off" />
 
     </LinearLayout>
 
-    <!-- قسم الحالة (Status) -->
+    <!-- قسم Radar line -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:text="@string/section_status"
+        adjustViewBounds="true"
+        android:text="Radar line"
         android:textColor="@color/text_secondary"
         android:textSize="10sp"
         android:textStyle="bold" />
 
-    <RadioGroup
-        android:id="@+id/radioStatus"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:orientation="horizontal">
 
-        <RadioButton android:id="@+id/rbStatusPrcs" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/status_prcs" />
-        <RadioButton android:id="@+id/rbStatusFill" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/status_fill" />
-        <RadioButton android:id="@+id/rbStatusOff" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/status_off" />
+        <Button android:id="@+id/rbAlignBottom" style="@style/HudToggleButton" android:layout_width="0dp" android:layout_weight="1" android:text="Bottom" />
+        <Button android:id="@+id/rbAlignMid" style="@style/HudToggleButton" android:layout_width="0dp" android:layout_weight="1" android:text="Center" />
+        <Button android:id="@+id/rbAlignTop" style="@style/HudToggleButton" android:layout_width="0dp" android:layout_weight="1" android:text="Top" />
+        <Button android:id="@+id/rbAlignOff" style="@style/HudToggleButton" android:layout_width="0dp" android:layout_weight="1" android:text="Off" />
 
-    </RadioGroup>
+    </LinearLayout>
 
     </LinearLayout>
     </ScrollView>
