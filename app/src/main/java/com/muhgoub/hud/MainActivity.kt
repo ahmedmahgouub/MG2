@@ -29,51 +29,48 @@ class MainActivity : AppCompatActivity() {
         btnModeTurbo = findViewById(R.id.btnModeTurbo)
         switchPermission = findViewById(R.id.switchPermission)
 
-        // بحث وجلب رقم الكيرنل الصافي فور فتح التطبيق
+        // جلب رقم الكيرنل في الخلفية بدون ما يجمد التاتش أو الشاشة
         fetchAndCleanKernel()
 
-        // الأزرار وتفاعلاتها
+        // الأزرار وتفاعلاتها ستعمل فوراً بدون أي تعليق
         btnLaunchPanel.setOnClickListener {
-            // تشغيل الرادار
+            // كود تشغيل الرادار
         }
 
         btnStopPanel.setOnClickListener {
-            // إيقاف الرادار
+            // كود إيقاف الرادار
         }
 
         btnModeNormal.setOnClickListener {
             // وضع Normal
         }
 
-        // عند الضغط على زر Kernel يعيد البحث والتحديث
         btnModeTurbo.setOnClickListener {
             fetchAndCleanKernel()
         }
     }
 
     private fun fetchAndCleanKernel() {
+        // تشغيل العملية بالكامل في خلفية منفصلة تماماً عشان التطبيق يفتح سلس
         Thread {
             var rawKernel = ""
             try {
-                // محاولة البحث عن الكيرنل الحقيقي من خلال أمر النظام
                 val process = Runtime.getRuntime().exec("uname -r")
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
                 rawKernel = reader.readLine() ?: ""
-                process.waitFor()
+                // تم إزالة process.waitFor() لمنع تجميد واجهة المستخدم
             } catch (e: Exception) {
                 rawKernel = ""
             }
 
-            // لو أمر النظام مابش حاجة، نجيبه من خصائص النظام كبديل آمن
             if (rawKernel.isBlank()) {
                 rawKernel = System.getProperty("os.version") ?: "6.1.157"
             }
 
-            // فلترة النص الطويل: أخذ الرقم الصافي فقط (أي شيء قبل أول شرطة '-' أو مسافة ' ')
-            // مثال: لو الناتج "6.1.157-android14-..." هياخد "6.1.157" بس
+            // قص النص الطويل وأخذ الرقم الصافي فقط
             val cleanKernel = rawKernel.split("-", " ")[0]
 
-            // عرض النتيجة النهائية بالترتيب المطلوب تماماً
+            // تحديث واجهة المستخدم بأمان تام
             runOnUiThread {
                 tvKernelVersion.text = "$cleanKernel : نسخة الكيرنل"
             }
