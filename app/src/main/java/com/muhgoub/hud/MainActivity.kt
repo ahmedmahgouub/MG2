@@ -2,6 +2,7 @@ package com.muhgoub.hud
 
 import android.app.ActivityManager
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -53,9 +54,16 @@ class MainActivity : AppCompatActivity() {
 
         btnLaunchPanel.setOnClickListener { onLaunchPanelClicked() }
         btnStopPanel.setOnClickListener { onStopPanelClicked() }
-        btnModeNormal.setOnClickListener { setAppMode("normal") }
         
-        // عند الضغط على زر Kernel: تفعيل الوضع وفحص الروت وجلب الكيرنال الحقيقي بدقة بدون أي تكرار
+        // عند الضغط على زر Normal: تفعيل الوضع، إظهار رسالة تأكيد، وإعادة كلمة MUHGOUB بيضاء
+        btnModeNormal.setOnClickListener { 
+            setAppMode("normal")
+            tvKernelDisplay.text = "MUHGOUB"
+            tvKernelDisplay.setTextColor(Color.WHITE)
+            Toast.makeText(this, "تم تفعيل الوضع Normal", Toast.LENGTH_SHORT).show()
+        }
+        
+        // عند الضغط على زر Kernel: تفعيل الوضع وجلب الكيرنال الحقيقي وتلوينه بالبرتقالي الغامق
         btnModeTurbo.setOnClickListener { 
             setAppMode("turbo")
             requestRootAndFetchKernel()
@@ -131,7 +139,7 @@ class MainActivity : AppCompatActivity() {
         }.start()
     }
 
-    // جلب كيرنال الهاتف الحقيقي بالمللي بدون أي كيرنال وهمي وعرض رسالة واحدة مدمجة
+    // جلب كيرنال الهاتف الحقيقي وتلوين الرقم فقط باللون البرتقالي الغامق (#FF8C00)
     private fun requestRootAndFetchKernel() {
         Thread {
             var kernelResult: String? = null
@@ -150,9 +158,11 @@ class MainActivity : AppCompatActivity() {
             mainHandler.post {
                 if (!kernelResult.isNullOrEmpty()) {
                     tvKernelDisplay.text = kernelResult
+                    tvKernelDisplay.setTextColor(Color.parseColor("#FF8C00")) // برتقالي غامق لرقم الكيرنال فقط
                     Toast.makeText(this, "تم تفعيل وضع Kernel وجلب الكيرنال بنجاح: $kernelResult", Toast.LENGTH_SHORT).show()
                 } else {
                     tvKernelDisplay.text = "MUHGOUB"
+                    tvKernelDisplay.setTextColor(Color.WHITE)
                     Toast.makeText(this, "يرجى منح صلاحيات الروت من تطبيق الإدارة أولاً ⚠️", Toast.LENGTH_SHORT).show()
                 }
             }
