@@ -62,16 +62,16 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "تم إيقاف الرادار", Toast.LENGTH_SHORT).show()
         }
 
-        // زر Normal
+        // زر Normal - طلب صلاحية الروت عند النقر
         btnModeNormal.setOnClickListener {
             currentMode = "normal"
-            Toast.makeText(this, "تم التفعيل على وضع: Normal", Toast.LENGTH_SHORT).show()
+            requestRootPermissionForAction("Normal")
         }
 
-        // زر Kernel
+        // زر Kernel - طلب صلاحية الروت عند النقر
         btnModeTurbo.setOnClickListener {
             currentMode = "kernel"
-            checkAndRequestKernelPermissions()
+            requestRootPermissionForAction("Kernel")
         }
 
         switchPermission.setOnCheckedChangeListener { _, isChecked ->
@@ -81,54 +81,31 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun checkAndRequestKernelPermissions() {
-        Toast.makeText(this, "جارِ البحث عن صلاحيات الكيرنل...", Toast.LENGTH_SHORT).show()
+    // دالة لطلب صلاحيات الروت فعلياً من نظام الـ Root / KernelSU
+    private fun requestRootPermissionForAction(modeName: String) {
+        Toast.makeText(this, "جارِ طلب صلاحيات الروت لوضع $modeName...", Toast.LENGTH_SHORT).show()
 
         Thread {
-            val hasKernelAccess = verifyRootOrKernelSU()
+            var success = false
+            try {
+                // تنفيذ أمر su لفتح نافذة منح الصلاحية للمستخدم (Magisk / KernelSU / SuperSU)
+                val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
+                val exitValue = process.waitFor()
+                if (exitValue == 0) {
+                    success = true
+                }
+            } catch (e: Exception) {
+                success = false
+            }
 
             runOnUiThread {
-                if (hasKernelAccess) {
-                    Toast.makeText(this, "تم العثور على الكيرنل ومنح الصلاحية بنجاح!", Toast.LENGTH_LONG).show()
+                if (success) {
+                    Toast.makeText(this, "تم منح صلاحيات الروت بنجاح لوضع $modeName!", Toast.LENGTH_LONG).show()
                 } else {
-                    Toast.makeText(this, "تنبيه: لم يتم اكتشاف صلاحيات كيرنل نشطة، سيتم العمل بوضع محدود", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "فشل منح صلاحيات الروت! تأكد من أن الجهاز به روت نشط", Toast.LENGTH_LONG).show()
                 }
             }
         }.start()
-    }
-
-    private fun verifyRootOrKernelSU(): Boolean {
-        val paths = arrayOf(
-            "/system/app/Superuser.apk",
-            "/sbin/su",
-            "/system/bin/su",
-            "/system/xbin/su",
-            "/data/local/xbin/su",
-            "/data/local/bin/su",
-            "/system/sd/xbin/su",
-            "/system/bin/failsafe/su",
-            "/data/local/su",
-            "/su/bin/su",
-            "/data/adb/ksu"
-        )
-        
-        try {
-            for (path in paths) {
-                if (File(path).exists()) {
-                    return true
-                }
-            }
-
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
-            val exitValue = process.waitFor()
-            if (exitValue == 0) {
-                return true
-            }
-        } catch (e: Exception) {
-            // تجاهل الأخطاء بأمان
-        }
-        
-        return false
     }
 
     private fun checkOverlayPermission(): Boolean {
