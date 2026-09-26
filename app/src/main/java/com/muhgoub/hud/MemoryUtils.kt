@@ -23,10 +23,28 @@ object MemoryUtils {
         return pid
     }
 
+    // دالة لاستخراج عنوان البداية لمكتبة libUE4.so من ذاكرة اللعبة ديناميكياً
+    fun getModuleBase(pid: Int, moduleName: String = "libUE4.so"): Long {
+        try {
+            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "cat /proc/$pid/maps"))
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                if (line!!.contains(moduleName) && line!!.contains("r-xp")) {
+                    val addrPart = line!!.substringBefore("-")
+                    return addrPart.toLong(16)
+                }
+            }
+            process.waitFor()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return 0L
+    }
+
     data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
     data class Vector3(val x: Float, val y: Float, val z: Float)
 
-    // قراءة قيمة Float من الذاكرة عبر dd والروت
     fun readFloat(pid: Int, address: Long): Float {
         try {
             val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=4 2>/dev/null"
@@ -46,11 +64,10 @@ object MemoryUtils {
         return 0f
     }
 
-    // قراءة مصفوفة كاملة (مثلاً ViewMatrix مكونة من 16 قيمة Float)
     fun readMatrix(pid: Int, address: Long): FloatArray {
         val matrix = FloatArray(16)
         try {
-            val byteCount = 16 * 4 // 16 floats * 4 bytes
+            val byteCount = 16 * 4
             val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=$byteCount 2>/dev/null"
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
             val inputStream = process.inputStream
@@ -69,7 +86,6 @@ object MemoryUtils {
         return matrix
     }
 
-    // معادلة تحويل الإحداثيات من 3D إلى 2D
     fun worldToScreen(worldLocation: Vector3, matrix: FloatArray, screenWidth: Int, screenHeight: Int): Point2D {
         val w = matrix[3] * worldLocation.x + matrix[7] * worldLocation.y + matrix[11] * worldLocation.z + matrix[15]
 
