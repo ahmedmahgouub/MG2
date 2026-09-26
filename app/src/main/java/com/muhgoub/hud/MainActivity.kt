@@ -10,9 +10,12 @@ import android.os.Looper
 import android.provider.Settings
 import android.widget.Button
 import android.widget.Switch
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import java.io.BufferedReader
+import java.io.InputStreamReader
 
 class MainActivity : AppCompatActivity() {
 
@@ -21,6 +24,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var switchPermission: Switch
     private lateinit var btnModeNormal: Button
     private lateinit var btnModeTurbo: Button
+    private lateinit var tvKernelDisplay: TextView
     private lateinit var prefs: PrefsManager
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -28,9 +32,9 @@ class MainActivity : AppCompatActivity() {
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             refreshPermissionUi()
             if (hasOverlayPermission()) {
-                startOverlayService()
+                startOverlayServiceWithRoot()
             } else {
-                Toast.makeText(this, getString(R.string.need_overlay_permission), Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "اخفاء الهاك عند تصوير الشاشه", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -45,18 +49,27 @@ class MainActivity : AppCompatActivity() {
         switchPermission = findViewById(R.id.switchPermission)
         btnModeNormal = findViewById(R.id.btnModeNormal)
         btnModeTurbo = findViewById(R.id.btnModeTurbo)
+        tvKernelDisplay = findViewById(R.id.tvKernelDisplay)
 
         btnLaunchPanel.setOnClickListener { onLaunchPanelClicked() }
         btnStopPanel.setOnClickListener { onStopPanelClicked() }
         btnModeNormal.setOnClickListener { setAppMode("normal") }
-        btnModeTurbo.setOnClickListener { setAppMode("turbo") }
+        
+        // عند الضغط على زر Kernel: طلب صلاحيات الروت، جلب أول 5 أحرف من الكيرنال، وتفعيل الوضع
+        btnModeTurbo.setOnClickListener { 
+            setAppMode("turbo")
+            requestRootAndFetchKernel()
+        }
 
         applyModeUi(prefs.getAppMode())
 
-        // (1) فحص صلاحية العرض فوق التطبيقات فور فتح التطبيق أول مرة، وتوجيه فوري للإعدادات
+        // فحص صلاحية العرض فوق التطبيقات عند بدء التشغيل
         if (!hasOverlayPermission()) {
             requestOverlayPermission()
         }
+        
+        // منح وتأكيد صلاحيات الروت الشاملة للتطبيق في البداية
+        requestRootPrivileges()
     }
 
     override fun onResume() {
@@ -66,7 +79,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun onLaunchPanelClicked() {
         if (hasOverlayPermission()) {
-            startOverlayService()
+            startOverlayServiceWithRoot()
         } else {
             requestOverlayPermission()
         }
@@ -92,24 +105,69 @@ class MainActivity : AppCompatActivity() {
         switchPermission.isChecked = hasOverlayPermission()
     }
 
-    private fun startOverlayService() {
+    // دمج صلاحيات الروت لتغذية التطبيق بالكامل
+    private fun requestRootPrivileges() {
+        Thread {
+            try {
+                val process = Runtime.getRuntime().exec("su")
+                val os = process.outputStream
+                os.write("id\n".toByteArray())
+                os.flush()
+                os.write("exit\n".toByteArray())
+                os.flush()
+                process.waitFor()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }.start()
+    }
+
+    // فحص الكيرنال وجلب أول 5 أحرف فقط بدقة مكان MUHGOUB
+    private fun requestRootAndFetchKernel() {
+        Thread {
+            var kernelResult = "MUHGOUB"
+            try {
+                val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "uname -r"))
+                val reader = BufferedReader(InputStreamReader(process.inputStream))
+                val line = reader.readLine()
+                if (!line.isNullOrEmpty()) {
+                    // اقتطاع أول 5 أرقام/حروف فقط من إصدار الكيرنال
+                    kernelResult = if (line.length >= 5) line.substring(0, 5) else line
+                }
+                process.waitFor()
+            } catch (e: Exception) {
+                // في حال فشل جلب الكيرنال بالروت يتم جلب الطريقة العادية واختصارها لأول 5 أحرف
+                try {
+                    val fallback = Build.VERSION.INCREMENTAL
+                    kernelResult = if (fallback.length >= 5) fallback.substring(0, 5) else fallback
+                } catch (ex: Exception) {
+                    kernelResult = "ERROR"
+                }
+            }
+
+            mainHandler.post {
+                tvKernelDisplay.text = kernelResult
+                Toast.makeText(this, "تم تفعيل كيرنال الهاك بنجاح: $kernelResult", Toast.LENGTH_SHORT).show()
+            }
+        }.start()
+    }
+
+    private fun startOverlayServiceWithRoot() {
+        // تنفيذ أمر su لخدمة الرادار والقائمة العائمة لتغذية التطبيق بصلاحيات عميقة
+        requestRootPrivileges()
+
         val intent = Intent(this, OverlayService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent)
         } else {
             startService(intent)
         }
-        Toast.makeText(this, getString(R.string.panel_running), Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "تم تشغيل الرادار", Toast.LENGTH_SHORT).show()
     }
 
-    // بتتشغل لما المستخدم يدوس على "إيقاف القائمة": بتتأكد الأول إن الخدمة
-    // شغالة فعلاً (عشان ميحصلش تشغيل خدمة جديدة بالغلط لو كانت أصلاً متوقفة)،
-    // بعدين بتوقف القائمة العايمة على طول، وفي نفس اللحظة بتحوّل لون الزرار
-    // لأحمر (bg_stop_button_active) لمدة ثانيتين كتأكيد بصري، وبعدين يرجع
-    // الزرار للونه الأزرق الأصلي (bg_main_button) تاني.
     private fun onStopPanelClicked() {
         if (!isOverlayServiceRunning()) {
-            Toast.makeText(this, getString(R.string.panel_already_stopped), Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "الرادار متوقف بالفعل", Toast.LENGTH_SHORT).show()
             return
         }
         btnStopPanel.setBackgroundResource(R.drawable.bg_stop_button_active)
@@ -124,12 +182,9 @@ class MainActivity : AppCompatActivity() {
             action = OverlayService.ACTION_STOP
         }
         startService(intent)
-        Toast.makeText(this, getString(R.string.panel_stopped), Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "تم إيقاف الرادار", Toast.LENGTH_SHORT).show()
     }
 
-    // بنستخدم ActivityManager بدل متغيّر محفوظ في الـ Prefs عشان نتأكد بشكل
-    // موثوق إن الخدمة شغالة فعلاً دلوقتي (مش بس آخر حالة محفوظة ممكن تبقى
-    // قديمة لو التطبيق اتقفل من النظام مثلاً).
     private fun isOverlayServiceRunning(): Boolean {
         val manager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
         @Suppress("DEPRECATION")
@@ -138,13 +193,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // (3) إصلاح زرّي "عادي / فائق" اللي كانوا من غير id ولا وظيفة
     private fun setAppMode(mode: String) {
         prefs.setAppMode(mode)
         applyModeUi(mode)
         Toast.makeText(
             this,
-            if (mode == "turbo") "تم تفعيل الوضع الفائق" else "تم تفعيل الوضع العادي",
+            if (mode == "turbo") "تم تفعيل وضع Kernel" else "تم تفعيل الوضع Normal",
             Toast.LENGTH_SHORT
         ).show()
     }
