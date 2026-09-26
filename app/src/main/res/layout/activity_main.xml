@@ -2,12 +2,14 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fillViewport="true"
     android:background="@color/bg_dark">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
+        android:gravity="center_horizontal"
         android:padding="20dp">
 
         <TextView
@@ -15,7 +17,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="end"
-            android:text="محجوب"
+            android:text="MUHGOUB"
             android:textColor="@color/cyan_accent"
             android:textSize="11sp"
             android:textStyle="bold" />
@@ -25,6 +27,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:orientation="horizontal"
+            android:gravity="center"
             android:weightSum="5">
 
             <LinearLayout
