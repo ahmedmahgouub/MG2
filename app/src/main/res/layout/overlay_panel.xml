@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ملحوظة مهمة: الحجم الحقيقي للنافذة العائمة اتحدد في كود OverlayService.kt (بالبكسل)
-     مش هنا، لأن أندرويد بيتجاهل مقاس الـ layout الجذري لما يكون النوافذ مضافة
-     مباشرة عن طريق WindowManager. الـ match_parent هنا معناها املا حجم النافذة
-     المحدد في الكود، مش تحديد حجم فعلي. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/panelRoot"
     android:layout_width="match_parent"
@@ -21,7 +17,7 @@
         android:orientation="vertical"
         android:padding="12dp">
 
-    <!-- الهيدر العلوي: لوجو + عنوان + مؤشر حالة + زر إغلاق/تصغير -->
+    <!-- الهيدر العلوي -->
     <FrameLayout
         android:id="@+id/dragHandle"
         android:layout_width="match_parent"
@@ -72,7 +68,7 @@
 
     </FrameLayout>
 
-    <!-- شبكة أزرار الأدوات الرئيسية (متضمنة زر رقم الفريق) -->
+    <!-- شبكة أزرار الأدوات الـ 12 -->
     <GridLayout
         android:id="@+id/gridTools"
         android:layout_width="match_parent"
@@ -91,6 +87,7 @@
         <Button android:id="@+id/btnTool8" style="@style/HudToggleButton" android:text="تحذير القنابل" />
         <Button android:id="@+id/btnTool9" style="@style/HudToggleButton" android:text="تنبيه الحواف" />
         <Button android:id="@+id/btnTool10" style="@style/HudToggleButton" android:text="رقم الفريق" />
+        <Button android:id="@+id/btnTool11" style="@style/HudToggleButton" android:text="التصويب التلقائي" />
 
     </GridLayout>
 
@@ -102,7 +99,7 @@
         android:layout_marginBottom="6dp"
         android:background="#22FFFFFF" />
 
-    <!-- قسم Bounding box -->
+    <!-- قسم Bounding box (تحته 3 خيارات زي الصورة) -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -123,12 +120,11 @@
 
     </LinearLayout>
 
-    <!-- قسم Radar line -->
+    <!-- قسم Radar line (تحته 4 خيارات زي الصورة) -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        adjustViewBounds="true"
         android:text="Radar line"
         android:textColor="@color/text_secondary"
         android:textSize="10sp"
