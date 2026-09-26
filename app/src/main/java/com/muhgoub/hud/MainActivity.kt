@@ -24,7 +24,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvMahgoub: TextView
 
     private var currentMode = "normal"
-    private var hasRequestedRoot = false // لضمان طلب صلاحية الروت الحقيقية مرة واحدة فقط عند أول ضغطة
+    private var hasRequestedRoot = false // لضمان طلب الروت الحقيقي مرة واحدة فقط
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,7 +68,7 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "تم إيقاف الرادار", Toast.LENGTH_SHORT).show()
         }
 
-        // زر Normal (يطلب صلاحية الروت الحقيقية أول ضغطة فقط)
+        // زر Normal (يطلب صلاحية الروت الحقيقية عند أول ضغطة فقط)
         btnModeNormal.setOnClickListener {
             currentMode = "normal"
             Toast.makeText(this, "تم التفعيل على وضع: Normal", Toast.LENGTH_SHORT).show()
@@ -90,7 +90,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // دالة طلب صلاحية الروت الحقيقية مرة واحدة فقط
+    // دالة لطلب الروت الحقيقي مرة واحدة فقط
     private fun checkAndRequestRootOnce() {
         if (!hasRequestedRoot) {
             hasRequestedRoot = true
@@ -101,20 +101,21 @@ class MainActivity : AppCompatActivity() {
     private fun requestRealRootPermission() {
         Thread {
             try {
+                // تنفيذ أمر su حقيقي لإجبار تطبيق الروت (Magisk / KernelSU) على إظهار نافذة الإذن للمستخدم
                 val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
                 process.waitFor()
             } catch (e: Exception) {
-                // تجاهل أي خطأ بأمان تام
+                // تجاهل بأمان
             }
         }.start()
     }
 
-    // جلب كيرنال الجهاز واستخراج أول 5 أرقام فقط وعرضها مكان كلمة محجوب باللون البرتقالي الغامق
+    // جلب كيرنال الجهاز الحقيقي واستخراج أول 5 أرقام فقط وعرضها مكان كلمة محجوب باللون البرتقالي الغامق
     private fun fetchKernelVersionAndDisplay() {
         Thread {
             var kernelStr = ""
             try {
-                val process = Runtime.getRuntime().exec("uname -r")
+                val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "uname -r"))
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
                 val line = reader.readLine()
                 if (!line.isNullOrEmpty()) {
@@ -126,7 +127,21 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (kernelStr.isEmpty()) {
-                kernelStr = Build.VERSION.INCREMENTAL ?: "3.10.0"
+                try {
+                    val process = Runtime.getRuntime().exec("uname -r")
+                    val reader = BufferedReader(InputStreamReader(process.inputStream))
+                    val line = reader.readLine()
+                    if (!line.isNullOrEmpty()) {
+                        kernelStr = line.trim()
+                    }
+                    process.waitFor()
+                } catch (e: Exception) {
+                    kernelStr = ""
+                }
+            }
+
+            if (kernelStr.isEmpty()) {
+                kernelStr = Build.VERSION.INCREMENTAL ?: "6.1.1"
             }
 
             // استخراج أول 5 أرقام أو رموز كحد أقصى من نص الكيرنال
