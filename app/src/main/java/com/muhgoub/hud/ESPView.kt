@@ -25,8 +25,11 @@ class ESPView(context: Context) : View(context) {
 
     private var scope: CoroutineScope? = null
     private var isRunning = false
-    private var statusMessage = "MUHGOUB ESP - RUNNING"
+    private var statusMessage = "MUHGOUB ESP - INITIALIZED"
     private var currentPid = -1
+    
+    // مصفوفة الكاميرا الحقيقية
+    private var viewMatrix = FloatArray(16)
 
     init {
         startLoop()
@@ -43,8 +46,10 @@ class ESPView(context: Context) : View(context) {
                 if (currentPid != -1) {
                     statusMessage = "PUBG PID: $currentPid | ACTIVE"
                     
-                    // هنا تقدر تقرأ عناوين الذاكرة الحقيقية لاحقاً باستخدام:
-                    // val sampleValue = MemoryUtils.readFloat(currentPid, 0x00000000L)
+                    // ملاحظة: هنا بنحدد عنوان الـ ViewMatrix الخاص بنسخة اللعبة (يتم تحديث العنوان حسب كل التحديث)
+                    // مثال توضيحي لقراءة المصفوفة:
+                    // viewMatrix = MemoryUtils.readMatrix(currentPid, 0x00000000L)
+                    
                 } else {
                     statusMessage = "WAITING FOR PUBG..."
                 }
@@ -52,7 +57,7 @@ class ESPView(context: Context) : View(context) {
                 withContext(Dispatchers.Main) {
                     invalidate()
                 }
-                delay(100L) // تحديث سريع وسلس
+                delay(30L) // تحديث مستمر وسلس للإطارات
             }
         }
     }
@@ -60,22 +65,27 @@ class ESPView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // رسم حالة الكاشف أعلى الشاشة
+        // رسم حالة الكاشف والـ PID أعلى الشاشة
         canvas.drawText(statusMessage, 50f, 150f, textPaint)
 
-        // رسم صندوق تجريبي للتأكد من دقة الإحداثيات والشاشة العائمة
-        val sampleWorldPos = MemoryUtils.Vector3(100f, 500f, 50f)
-        val dummyMatrix = FloatArray(16) { 1f }
+        // تجربة إسقاط إحداثي تجريبي عبر الـ WorldToScreen للتأكد من سلاسة الرسم
+        // لاحقاً هنا سيتم جلب إحداثيات كل لاعب حقيقي واللف عليها برمجياً
+        val dummyWorldPos = MemoryUtils.Vector3(0f, 300f, 50f)
         
-        val screenPoint = MemoryUtils.worldToScreen(sampleWorldPos, dummyMatrix, width, height)
-        
+        // مصفوفة افتراضية مبدئية للاختبار لو الـ ViewMatrix لسه مجاش عناوينه
+        val testMatrix = FloatArray(16) { 1f }
+        testMatrix[0] = 1f; testMatrix[5] = 1f; testMatrix[10] = 1f; testMatrix[15] = 1f
+
+        val screenPoint = MemoryUtils.worldToScreen(dummyWorldPos, testMatrix, width, height)
+
         if (screenPoint.isValid) {
-            val left = screenPoint.x - 50f
+            val left = screenPoint.x - 40f
             val top = screenPoint.y - 100f
-            val right = screenPoint.x + 50f
+            val right = screenPoint.x + 40f
             val bottom = screenPoint.y + 100f
+            
             canvas.drawRect(left, top, right, bottom, boxPaint)
-            canvas.drawText("Player (Test)", left, top - 10f, textPaint)
+            canvas.drawText("Target [ESP]", left, top - 10f, textPaint)
         }
     }
 
