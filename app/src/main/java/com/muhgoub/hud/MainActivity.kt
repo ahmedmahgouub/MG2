@@ -1,170 +1,166 @@
-package com.muhgoub.hud
+package com.yourpackage.name; // استبدل هذا باسم الحزمة الخاص بك
 
-import android.content.Intent
-import android.graphics.Color
-import android.net.Uri
-import android.os.Build
-import android.os.Bundle
-import android.provider.Settings
-import android.widget.Button
-import android.widget.Switch
-import android.widget.TextView
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.provider.Settings;
+import android.view.View;
+import android.widget.Button;
+import android.widget.Switch;
+import android.widget.TextView;
+import android.widget.Toast;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
-class MainActivity : AppCompatActivity() {
+public class MainActivity extends AppCompatActivity {
 
-    private lateinit var btnLaunchPanel: Button
-    private lateinit var btnStopPanel: Button
-    private lateinit var btnModeNormal: Button
-    private lateinit var btnModeTurbo: Button
-    private lateinit var switchPermission: Switch
-    private lateinit var tvMahgoub: TextView
+    private Button btnModeNormal, btnModeTurbo;
+    private TextView tvMahgoub;
+    private Switch switchPermission;
+    private boolean isKernelActive = false; // حالة زر الكيرنال (تشغيل/إيقاف)
+    private boolean hasRequestedNormalPermissions = false; // لمنع تكرار طلب الصلاحيات مع نورمال
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+    private static final String CHANNEL_ID = "radar_channel_id";
+    private static final int NOTIFICATION_ID = 1001;
 
-        initViews()
-        setupListeners()
-    }
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        
+        // الانتقال التلقائي لإذن العرض فوق التطبيقات عند أول فتح
+        checkOverlayPermission();
 
-    private fun initViews() {
-        btnLaunchPanel = findViewById(R.id.btnLaunchPanel)
-        btnStopPanel = findViewById(R.id.btnStopPanel)
-        btnModeNormal = findViewById(R.id.btnModeNormal)
-        btnModeTurbo = findViewById(R.id.btnModeTurbo)
-        switchPermission = findViewById(R.id.switchPermission)
-        tvMahgoub = findViewById(R.id.tvMahgoub)
-    }
+        setContentView(R.layout.activity_main);
 
-    private fun setupListeners() {
-        // زر تشغيل الرادار
-        btnLaunchPanel.setOnClickListener {
-            if (checkOverlayPermission()) {
-                val intent = Intent(this, OverlayService::class.java)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    startForegroundService(intent)
+        tvMahgoub = findViewById(R.id.tvMahgoub);
+        btnModeNormal = findViewById(R.id.btnModeNormal);
+        btnModeTurbo = findViewById(R.id.btnModeTurbo);
+        switchPermission = findViewById(R.id.switchPermission);
+
+        createNotificationChannel();
+
+        // زر Normal: طلب الروت وإظهار الإشعار "مرة واحدة فقط"
+        btnModeNormal.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                btnModeNormal.setBackgroundResource(R.drawable.bg_segment_filled);
+                btnModeTurbo.setBackgroundResource(R.drawable.bg_segment_outline);
+
+                if (!hasRequestedNormalPermissions) {
+                    requestRootAndShowNotification();
+                    hasRequestedNormalPermissions = true;
                 } else {
-                    startService(intent)
+                    Toast.makeText(MainActivity.this, "وضع Normal مفعل مسبقاً", Toast.LENGTH_SHORT).show();
                 }
-                Toast.makeText(this, "تم تشغيل الرادار", Toast.LENGTH_SHORT).show()
-            } else {
-                requestOverlayPermission()
             }
-        }
+        });
 
-        // زر إيقاف الرادار
-        btnStopPanel.setOnClickListener {
-            val intent = Intent(this, OverlayService::class.java).apply {
-                action = OverlayService.ACTION_STOP
-            }
-            startService(intent)
-            Toast.makeText(this, "تم إيقاف الرادار", Toast.LENGTH_SHORT).show()
-        }
+        // زر Kernel (Turbo): نظام تبديل Toggle (ضغط أولى يعرض الكيرنال، ضغطة ثانية يقفله)
+        btnModeTurbo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (!isKernelActive) {
+                    isKernelActive = true;
+                    btnModeTurbo.setBackgroundResource(R.drawable.bg_segment_filled);
+                    btnModeNormal.setBackgroundResource(R.drawable.bg_segment_outline);
 
-        // زر Normal
-        btnModeNormal.setOnClickListener {
-            Toast.makeText(this, "تم التفعيل على وضع: Normal", Toast.LENGTH_SHORT).show()
-            requestRootAndTest()
-        }
-
-        // زر Kernel (يطلب الروت ويجيب الكيرنال مكان محجوب باللون البرتقالي)
-        btnModeTurbo.setOnClickListener {
-            Toast.makeText(this, "تم التفعيل على وضع: Kernel", Toast.LENGTH_SHORT).show()
-            fetchKernelVersionWithRoot()
-        }
-
-        switchPermission.setOnCheckedChangeListener { _, isChecked ->
-            if (!isChecked) {
-                Toast.makeText(this, "تنبيه: يجب منح الصلاحية لعمل الرادار بكفاءة", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    private fun requestRootAndTest() {
-        Thread {
-            try {
-                val process = ProcessBuilder("su", "-c", "id").start()
-                val exitCode = process.waitFor()
-                runOnUiThread {
-                    if (exitCode == 0) {
-                        Toast.makeText(this, "تم منح صلاحيات الروت بنجاح!", Toast.LENGTH_SHORT).show()
+                    String kernelVersion = getKernelVersion();
+                    if (kernelVersion.length() >= 5) {
+                        tvMahgoub.setText(kernelVersion.substring(0, 5).toUpperCase());
                     } else {
-                        Toast.makeText(this, "تم رفض صلاحية الروت", Toast.LENGTH_SHORT).show()
+                        tvMahgoub.setText("KERNEL");
                     }
-                }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    Toast.makeText(this, "خطأ في طلب الروت", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(MainActivity.this, "تم تفعيل وعرض بيانات الكيرنال", Toast.LENGTH_SHORT).show();
+                } else {
+                    isKernelActive = false;
+                    btnModeTurbo.setBackgroundResource(R.drawable.bg_segment_outline);
+                    btnModeNormal.setBackgroundResource(R.drawable.bg_segment_filled);
+
+                    tvMahgoub.setText("MUHGOUB");
+                    Toast.makeText(MainActivity.this, "تم إيقاف الكيرنال", Toast.LENGTH_SHORT).show();
                 }
             }
-        }.start()
+        });
     }
 
-    // جلب كيرنال الجهاز باستخدام su لإجبار ظهور نافذة الروت، واستخراج أول 5 أرقام باللون البرتقالي
-    private fun fetchKernelVersionWithRoot() {
-        Thread {
-            var kernelStr = ""
-            try {
-                // استخدام ProcessBuilder لتنفيذ أمر الكيرنال بصلاحيات الروت
-                val process = ProcessBuilder("su", "-c", "uname -r").start()
-                val reader = BufferedReader(InputStreamReader(process.inputStream))
-                val line = reader.readLine()
-                if (!line.isNullOrEmpty()) {
-                    kernelStr = line.trim()
-                }
-                process.waitFor()
-            } catch (e: Exception) {
-                kernelStr = ""
-            }
-
-            // لو فشل لسبب ما، نجرب قراءته بالطريقة العادية
-            if (kernelStr.isEmpty()) {
-                try {
-                    val process = Runtime.getRuntime().exec("uname -r")
-                    val reader = BufferedReader(InputStreamReader(process.inputStream))
-                    val line = reader.readLine()
-                    if (!line.isNullOrEmpty()) {
-                        kernelStr = line.trim()
-                    }
-                    process.waitFor()
-                } catch (e: Exception) {
-                    kernelStr = ""
-                }
-            }
-
-            if (kernelStr.isEmpty()) {
-                kernelStr = Build.VERSION.INCREMENTAL ?: "6.1.1"
-            }
-
-            // استخراج أول 5 أرقام فقط
-            val first5 = if (kernelStr.length >= 5) kernelStr.substring(0, 5) else kernelStr
-
-            runOnUiThread {
-                tvMahgoub.text = first5
-                tvMahgoub.setTextColor(Color.parseColor("#FF8C00")) // لون برتقالي غامق
-            }
-        }.start()
-    }
-
-    private fun checkOverlayPermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Settings.canDrawOverlays(this)
-        } else {
-            true
-        }
-    }
-
-    private fun requestOverlayPermission() {
+    // دالة التحقق من إذن العرض فوق التطبيقات
+    private void checkOverlayPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val intent = Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:$packageName")
-            )
-            startActivityForResult(intent, 1234)
+            if (!Settings.canDrawOverlays(this)) {
+                Toast.makeText(this, "يرجى السماح بالظهور فوق التطبيقات لتشغيل الرادار", Toast.LENGTH_LONG).show();
+                Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
+            }
         }
+    }
+
+    // دالة طلب صلاحيات الروت والإشعار (تُنفذ مرة واحدة)
+    private void requestRootAndShowNotification() {
+        try {
+            Process process = Runtime.getRuntime().exec(new String[]{"su", "-c", "id"});
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String output = reader.readLine();
+            if (output != null && output.contains("uid=0")) {
+                Toast.makeText(this, "تم الحصول على صلاحيات الروت بنجاح", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        showRunningNotification();
+    }
+
+    // إشعار التشغيل
+    private void showRunningNotification() {
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_menu_compass)
+                .setContentTitle("الرادار يعمل الآن")
+                .setContentText("التطبيق يعمل في الخلفية بصلاحيات الروت")
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(false);
+
+        if (notificationManager != null) {
+            notificationManager.notify(NOTIFICATION_ID, builder.build());
+        }
+    }
+
+    // قناة الإشعارات
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = "Radar Channel";
+            String description = "Channel for Radar Running Notification";
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+            
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(channel);
+            }
+        }
+    }
+
+    // جلب إصدار الكيرنال
+    private String getKernelVersion() {
+        try {
+            Process p = Runtime.getRuntime().exec("uname -r");
+            BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            String line = in.readLine();
+            if (line != null) {
+                return line.trim();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "MUHGOUB";
     }
 }
