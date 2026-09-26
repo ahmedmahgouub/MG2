@@ -11,11 +11,10 @@
         android:padding="20dp">
 
         <TextView
-            android:id="@+id/tvMahgoub"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="end"
-            android:text="MUHGOUB"
+            android:text="VERSION 1.0"
             android:textColor="@color/cyan_accent"
             android:textSize="11sp"
             android:textStyle="bold" />
@@ -169,14 +168,13 @@
 
         </LinearLayout>
 
-        <!-- زر تشغيل الرادار -->
         <Button
             android:id="@+id/btnLaunchPanel"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:layout_marginTop="32dp"
             android:background="@drawable/bg_main_button"
-            android:text="تشغيل الرادار"
+            android:text="@string/btn_launch_panel"
             android:textAllCaps="false"
             android:textColor="@color/white"
             android:textSize="16sp"
@@ -198,7 +196,6 @@
             android:layout_marginBottom="20dp"
             android:background="@color/icon_circle_gray" />
 
-        <!-- أزرار Normal و Kernel -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -212,7 +209,7 @@
                 android:layout_weight="1"
                 android:layout_marginEnd="8dp"
                 android:background="@drawable/bg_segment_filled"
-                android:text="Normal"
+                android:text="@string/mode_normal"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
                 android:textSize="13sp"
@@ -224,14 +221,14 @@
                 android:layout_height="48dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_segment_outline"
-                android:text="Kernel"
+                android:text="@string/mode_turbo"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
                 android:textSize="13sp" />
 
         </LinearLayout>
 
-        <!-- بطاقة خيار إخفاء التصوير -->
+        <!-- بطاقة خيار إخفاء التصوير مع زر الـ Switch الأصلي -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -241,14 +238,29 @@
             android:orientation="horizontal"
             android:padding="16dp">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="إخفاء التصوير"
-                android:textColor="@color/text_primary"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="إخفاء التصوير"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/need_overlay_permission"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp" />
+
+            </LinearLayout>
 
             <Switch
                 android:id="@+id/switchPermission"
@@ -257,14 +269,18 @@
 
         </LinearLayout>
 
-        <!-- زر إيقاف الرادار -->
+        <!-- زرار إيقاف القائمة العايمة: نفس شكل ولون زرار "تشغيل لوحة التحكم"
+             فوق (bg_main_button)، ومتحط في آخر الشاشة تحت. أول ما يتضغط بيوقف
+             خدمة القائمة العايمة على طول (فتختفي)، وشكله بيتحول لأحمر
+             (bg_stop_button_active) لمدة ثانيتين كتأكيد بصري إن الإيقاف حصل،
+             وبعدين يرجع للونه الأزرق الأصلي. المنطق كله في MainActivity.kt. -->
         <Button
             android:id="@+id/btnStopPanel"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:layout_marginTop="16dp"
             android:background="@drawable/bg_main_button"
-            android:text="إيقاف الرادار"
+            android:text="@string/btn_stop_panel"
             android:textAllCaps="false"
             android:textColor="@color/white"
             android:textSize="16sp"
