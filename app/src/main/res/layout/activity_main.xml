@@ -175,13 +175,15 @@
             android:layout_height="56dp"
             android:layout_marginTop="32dp"
             android:background="@drawable/bg_main_button"
+            android:clickable="true"
+            android:focusable="true"
             android:text="تشغيل الرادار"
             android:textAllCaps="false"
             android:textColor="@color/white"
             android:textSize="16sp"
             android:textStyle="bold" />
 
-        <!-- مستطيل عرض نوع ورقم الكيرنل (مكان الاسم القديم) -->
+        <!-- مستطيل عرض نوع ورقم الكيرنل -->
         <TextView
             android:id="@+id/tvKernelVersion"
             android:layout_width="match_parent"
@@ -216,6 +218,8 @@
                 android:layout_weight="1"
                 android:layout_marginEnd="8dp"
                 android:background="@drawable/bg_segment_outline"
+                android:clickable="true"
+                android:focusable="true"
                 android:text="Kernel"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
@@ -228,6 +232,8 @@
                 android:layout_height="48dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_segment_filled"
+                android:clickable="true"
+                android:focusable="true"
                 android:text="Normal"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
@@ -244,7 +250,9 @@
             android:background="@drawable/bg_overlay_card"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="16dp">
+            android:padding="16dp"
+            android:clickable="true"
+            android:focusable="true">
 
             <Switch
                 android:id="@+id/switchPermission"
@@ -270,6 +278,8 @@
             android:layout_height="56dp"
             android:layout_marginTop="16dp"
             android:background="@drawable/bg_main_button"
+            android:clickable="true"
+            android:focusable="true"
             android:text="إيقاف الرادار"
             android:textAllCaps="false"
             android:textColor="@color/white"
