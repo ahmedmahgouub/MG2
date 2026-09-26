@@ -1,24 +1,18 @@
-
 package com.muhgoub.hud
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.PixelFormat
-import android.hardware.camera2.CameraAccessException
-import android.hardware.camera2.CameraManager
-import android.net.TrafficStats
-import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.provider.Settings
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
@@ -27,10 +21,7 @@ import android.view.WindowManager
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.NotificationCompat
-import java.net.InetAddress
-import kotlin.concurrent.thread
 import kotlin.math.abs
 
 class OverlayService : Service() {
@@ -43,6 +34,7 @@ class OverlayService : Service() {
 
     private lateinit var windowManager: WindowManager
     private lateinit var prefs: PrefsManager
+    private lateinit var rawPrefs: SharedPreferences
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private var bubbleView: View? = null
@@ -56,6 +48,7 @@ class OverlayService : Service() {
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         prefs = PrefsManager(this)
+        rawPrefs = getSharedPreferences("muhgoub_hud_prefs", Context.MODE_PRIVATE)
 
         startForeground(NOTIFICATION_ID, buildNotification())
 
@@ -211,11 +204,11 @@ class OverlayService : Service() {
             }
         }
 
-        val currentBox = prefs.getString("box_mode", "off")
+        val currentBox = rawPrefs.getString("box_mode", "off") ?: "off"
         refreshBoxUI(currentBox)
         boxButtons.forEach { (btn, value) ->
             btn?.setOnClickListener {
-                prefs.setString("box_mode", value)
+                rawPrefs.edit().putString("box_mode", value).apply()
                 refreshBoxUI(value)
                 toast("Bounding Box: $value")
             }
@@ -234,11 +227,11 @@ class OverlayService : Service() {
             }
         }
 
-        val currentRadar = prefs.getString("radar_mode", "off")
+        val currentRadar = rawPrefs.getString("radar_mode", "off") ?: "off"
         refreshRadarUI(currentRadar)
         radarButtons.forEach { (btn, value) ->
             btn?.setOnClickListener {
-                prefs.setString("radar_mode", value)
+                rawPrefs.edit().putString("radar_mode", value).apply()
                 refreshRadarUI(value)
                 toast("Radar Line: $value")
             }
