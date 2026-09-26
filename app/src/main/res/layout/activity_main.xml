@@ -19,6 +19,7 @@
             android:textSize="11sp"
             android:textStyle="bold" />
 
+        <!-- صف أيقونات اختصارات النظام -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -168,8 +169,8 @@
 
         </LinearLayout>
 
-        <!-- زر تشغيل الرادار (تم تحويله لـ LinearLayout قابل للضغط 100%) -->
-        <LinearLayout
+        <!-- زر تشغيل الرادار (نستخدم Button عادي مع إضافة خاصية android:clickable="true" و android:focusable="true") -->
+        <Button
             android:id="@+id/btnLaunchPanel"
             android:layout_width="match_parent"
             android:layout_height="56dp"
@@ -177,19 +178,12 @@
             android:background="@drawable/bg_main_button"
             android:clickable="true"
             android:focusable="true"
-            android:gravity="center"
-            android:orientation="horizontal">
+            android:text="تشغيل الرادار"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="تشغيل الرادار"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- مستطيل عرض رقم الكيرنل -->
+        <!-- نسخة الكيرنل -->
         <TextView
             android:id="@+id/tvKernelVersion"
             android:layout_width="match_parent"
@@ -198,7 +192,7 @@
             android:background="@drawable/bg_overlay_card"
             android:gravity="center"
             android:padding="14dp"
-            android:text="نوع ورقم الكيرنل سيظهر هنا"
+            android:text="جاري جلب الكيرنل..."
             android:textColor="@color/white"
             android:textSize="14sp"
             android:textStyle="bold" />
@@ -210,14 +204,14 @@
             android:layout_marginBottom="16dp"
             android:background="@color/icon_circle_gray" />
 
-        <!-- أزرار Kernel و Normal -->
+        <!-- أزرار الأوضاع -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:weightSum="2">
 
-            <LinearLayout
+            <Button
                 android:id="@+id/btnModeTurbo"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
@@ -226,19 +220,12 @@
                 android:background="@drawable/bg_segment_outline"
                 android:clickable="true"
                 android:focusable="true"
-                android:gravity="center"
-                android:orientation="horizontal">
+                android:text="Kernel"
+                android:textColor="@color/white"
+                android:textSize="13sp"
+                android:textStyle="bold" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Kernel"
-                    android:textColor="@color/white"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <LinearLayout
+            <Button
                 android:id="@+id/btnModeNormal"
                 android:layout_width="0dp"
                 android:layout_height="48dp"
@@ -246,31 +233,24 @@
                 android:background="@drawable/bg_segment_filled"
                 android:clickable="true"
                 android:focusable="true"
-                android:gravity="center"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Normal"
-                    android:textColor="@color/white"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
+                android:text="Normal"
+                android:textColor="@color/white"
+                android:textSize="13sp"
+                android:textStyle="bold" />
 
         </LinearLayout>
 
-        <!-- بطاقة خيار إخفاء التصوير -->
+        <!-- إخفاء التصوير -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:background="@drawable/bg_overlay_card"
+            android:clickable="true"
+            android:focusable="true"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="16dp"
-            android:clickable="true"
-            android:focusable="true">
+            android:padding="16dp">
 
             <Switch
                 android:id="@+id/switchPermission"
@@ -290,7 +270,7 @@
         </LinearLayout>
 
         <!-- زر إيقاف الرادار -->
-        <LinearLayout
+        <Button
             android:id="@+id/btnStopPanel"
             android:layout_width="match_parent"
             android:layout_height="56dp"
@@ -298,17 +278,10 @@
             android:background="@drawable/bg_main_button"
             android:clickable="true"
             android:focusable="true"
-            android:gravity="center"
-            android:orientation="horizontal">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="إيقاف الرادار"
-                android:textColor="@color/white"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-        </LinearLayout>
+            android:text="إيقاف الرادار"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold" />
 
     </LinearLayout>
 
