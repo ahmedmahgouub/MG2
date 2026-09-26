@@ -3,7 +3,7 @@ package com.muhgoub.hud
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
+importandroid.graphics.Paint
 import android.view.View
 import kotlinx.coroutines.*
 
@@ -32,10 +32,9 @@ class ESPView(context: Context) : View(context) {
 
     private var scope: CoroutineScope? = null
     private var isRunning = false
-    private var statusMessage = "MUHGOUB ESP - SCANNING"
+    private var statusMessage = "MUHGOUB ESP - READY"
     private var currentPid = -1
     
-    // مصفوفة الكاميرا وحفظ إحداثيات اللاعبين المؤقتة
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
@@ -52,15 +51,17 @@ class ESPView(context: Context) : View(context) {
                 currentPid = MemoryUtils.findProcessId("com.tencent.ig")
                 
                 if (currentPid != -1) {
-                    statusMessage = "PUBG PID: $currentPid | LIVE"
+                    // استخراج عنوان المكتبة الأساسي للعبة
+                    val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
-                    // 1. قراءة الـ ViewMatrix الفعلية من الذاكرة (يتم تحديث العنوان حسب كل إصدار لعبة)
-                    // viewMatrix = MemoryUtils.readMatrix(currentPid, 0x00000000L)
-
-                    // 2. تحديث قائمة الكائنات (Entity Loop) لجلب إحداثيات الأعداء الحقيقيين
-                    synchronized(playerList) {
-                        playerList.clear()
-                        // هنا يتم جلب الإحداثيات وحفظها في الـ playerList برمجياً
+                    if (libBase != 0L) {
+                        statusMessage = "PID: $currentPid | BASE: 0x${java.lang.Long.toHexString(libBase)}"
+                        
+                        // هنا يتم إضافة الـ Offset الخاص بالـ ViewMatrix على الـ libBase وقراءته هكذا:
+                        // val matrixAddress = libBase + 0xYOUR_VIEW_MATRIX_OFFSET
+                        // viewMatrix = MemoryUtils.readMatrix(currentPid, matrixAddress)
+                    } else {
+                        statusMessage = "PID: $currentPid | WAITING FOR LIB..."
                     }
                 } else {
                     statusMessage = "WAITING FOR PUBG..."
@@ -69,7 +70,7 @@ class ESPView(context: Context) : View(context) {
                 withContext(Dispatchers.Main) {
                     invalidate()
                 }
-                delay(25L) // تحديث فائق السلاسة للإطارات
+                delay(25L)
             }
         }
     }
@@ -77,7 +78,7 @@ class ESPView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // رسم الحالة أعلى الشاشة
+        // رسم الحالة وعنوان الأساس أعلى الشاشة
         canvas.drawText(statusMessage, 50f, 150f, textPaint)
 
         // رسم صندوق تجريبي للتأكد من استقرار الإطارات
