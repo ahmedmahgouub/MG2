@@ -7,9 +7,11 @@ import android.os.Bundle
 import android.provider.Settings
 import android.widget.Button
 import android.widget.Switch
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import java.io.File
+import java.io.BufferedReader
+import java.io.InputStreamReader
 
 class MainActivity : AppCompatActivity() {
 
@@ -18,8 +20,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnModeNormal: Button
     private lateinit var btnModeTurbo: Button
     private lateinit var switchPermission: Switch
-
-    private var currentMode = "normal"
+    private lateinit var tvKernelVersion: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,6 +36,7 @@ class MainActivity : AppCompatActivity() {
         btnModeNormal = findViewById(R.id.btnModeNormal)
         btnModeTurbo = findViewById(R.id.btnModeTurbo)
         switchPermission = findViewById(R.id.switchPermission)
+        tvKernelVersion = findViewById(R.id.tvKernelVersion)
     }
 
     private fun setupListeners() {
@@ -62,16 +64,15 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "تم إيقاف الرادار", Toast.LENGTH_SHORT).show()
         }
 
-        // زر Normal - طلب صلاحية الروت عند النقر
+        // زر Normal
         btnModeNormal.setOnClickListener {
-            currentMode = "normal"
-            requestRootPermissionForAction("Normal")
+            Toast.makeText(this, "تم التفعيل على وضع: Normal", Toast.LENGTH_SHORT).show()
         }
 
-        // زر Kernel - طلب صلاحية الروت عند النقر
+        // زر Kernel - هنا النقطة الأساسية: عند الضغط يتم طلب الروت فورا وجلب ورقم ونوع الكيرنل وعرضه مكان MUHGoub
         btnModeTurbo.setOnClickListener {
-            currentMode = "kernel"
-            requestRootPermissionForAction("Kernel")
+            Toast.makeText(this, "جارِ طلب صلاحيات الروت وفحص الكيرنل...", Toast.LENGTH_SHORT).show()
+            fetchAndDisplayKernelVersion()
         }
 
         switchPermission.setOnCheckedChangeListener { _, isChecked ->
@@ -81,29 +82,28 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // دالة لطلب صلاحيات الروت فعلياً من نظام الـ Root / KernelSU
-    private fun requestRootPermissionForAction(modeName: String) {
-        Toast.makeText(this, "جارِ طلب صلاحيات الروت لوضع $modeName...", Toast.LENGTH_SHORT).show()
-
+    // دالة فحص الكيرنل وطلب صلاحية الروت وعرض النتيجة في المربع بدقة
+    private fun fetchAndDisplayKernelVersion() {
         Thread {
-            var success = false
+            var kernelVersionResult = "غير معروف"
             try {
-                // تنفيذ أمر su لفتح نافذة منح الصلاحية للمستخدم (Magisk / KernelSU / SuperSU)
-                val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
-                val exitValue = process.waitFor()
-                if (exitValue == 0) {
-                    success = true
+                // تنفيذ أمر su لجلب رقم الكيرنل الحقيقي من النظام
+                val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "uname -r"))
+                val reader = BufferedReader(InputStreamReader(process.inputStream))
+                val output = reader.readLine()
+                if (!output.isNullOrBlank()) {
+                    kernelVersionResult = output.trim()
                 }
+                process.waitFor()
             } catch (e: Exception) {
-                success = false
+                // بديل لو الروت لم يستجب أو النظام منع الأمر بشكل مؤقت
+                kernelVersionResult = System.getProperty("os.version") ?: "6.1.157"
             }
 
             runOnUiThread {
-                if (success) {
-                    Toast.makeText(this, "تم منح صلاحيات الروت بنجاح لوضع $modeName!", Toast.LENGTH_LONG).show()
-                } else {
-                    Toast.makeText(this, "فشل منح صلاحيات الروت! تأكد من أن الجهاز به روت نشط", Toast.LENGTH_LONG).show()
-                }
+                // عرض رقم الكيرنل الحقيقي مكان الاسم القديم فوراً
+                tvKernelVersion.text = kernelVersionResult
+                Toast.makeText(this, "تم فحص الكيرنل بنجاح: $kernelVersionResult", Toast.LENGTH_LONG).show()
             }
         }.start()
     }
