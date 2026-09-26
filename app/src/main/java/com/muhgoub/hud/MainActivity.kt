@@ -55,7 +55,7 @@ class MainActivity : AppCompatActivity() {
         btnStopPanel.setOnClickListener { onStopPanelClicked() }
         btnModeNormal.setOnClickListener { setAppMode("normal") }
         
-        // عند الضغط على زر Kernel: طلب صلاحيات الروت، جلب أول 5 أحرف من الكيرنال، وتفعيل الوضع
+        // عند الضغط على زر Kernel: تفعيل الوضع وفحص الروت وجلب الكيرنال الحقيقي بدقة بدون أي تكرار
         btnModeTurbo.setOnClickListener { 
             setAppMode("turbo")
             requestRootAndFetchKernel()
@@ -63,13 +63,11 @@ class MainActivity : AppCompatActivity() {
 
         applyModeUi(prefs.getAppMode())
 
-        // فحص صلاحية العرض فوق التطبيقات عند بدء التشغيل
         if (!hasOverlayPermission()) {
             requestOverlayPermission()
         }
         
-        // منح وتأكيد صلاحيات الروت الشاملة للتطبيق في البداية
-        requestRootPrivileges()
+        requestRootPrivileges(false)
     }
 
     override fun onResume() {
@@ -105,9 +103,9 @@ class MainActivity : AppCompatActivity() {
         switchPermission.isChecked = hasOverlayPermission()
     }
 
-    // دمج صلاحيات الروت لتغذية التطبيق بالكامل
-    private fun requestRootPrivileges() {
+    private fun requestRootPrivileges(showToast: Boolean) {
         Thread {
+            var isRooted = false
             try {
                 val process = Runtime.getRuntime().exec("su")
                 val os = process.outputStream
@@ -115,46 +113,54 @@ class MainActivity : AppCompatActivity() {
                 os.flush()
                 os.write("exit\n".toByteArray())
                 os.flush()
-                process.waitFor()
+                val exitCode = process.waitFor()
+                isRooted = (exitCode == 0)
             } catch (e: Exception) {
-                e.printStackTrace()
+                isRooted = false
+            }
+
+            if (showToast) {
+                mainHandler.post {
+                    if (isRooted) {
+                        Toast.makeText(this, "تم منح صلاحيات الروت بنجاح ✅", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this, "فشل الحصول على صلاحيات الروت ❌", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         }.start()
     }
 
-    // فحص الكيرنال وجلب أول 5 أحرف فقط بدقة مكان MUHGOUB
+    // جلب كيرنال الهاتف الحقيقي بالمللي بدون أي كيرنال وهمي وعرض رسالة واحدة مدمجة
     private fun requestRootAndFetchKernel() {
         Thread {
-            var kernelResult = "MUHGOUB"
+            var kernelResult: String? = null
             try {
                 val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "uname -r"))
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
                 val line = reader.readLine()
                 if (!line.isNullOrEmpty()) {
-                    // اقتطاع أول 5 أرقام/حروف فقط من إصدار الكيرنال
                     kernelResult = if (line.length >= 5) line.substring(0, 5) else line
                 }
                 process.waitFor()
             } catch (e: Exception) {
-                // في حال فشل جلب الكيرنال بالروت يتم جلب الطريقة العادية واختصارها لأول 5 أحرف
-                try {
-                    val fallback = Build.VERSION.INCREMENTAL
-                    kernelResult = if (fallback.length >= 5) fallback.substring(0, 5) else fallback
-                } catch (ex: Exception) {
-                    kernelResult = "ERROR"
-                }
+                kernelResult = null
             }
 
             mainHandler.post {
-                tvKernelDisplay.text = kernelResult
-                Toast.makeText(this, "تم تفعيل كيرنال الهاك بنجاح: $kernelResult", Toast.LENGTH_SHORT).show()
+                if (!kernelResult.isNullOrEmpty()) {
+                    tvKernelDisplay.text = kernelResult
+                    Toast.makeText(this, "تم تفعيل وضع Kernel وجلب الكيرنال بنجاح: $kernelResult", Toast.LENGTH_SHORT).show()
+                } else {
+                    tvKernelDisplay.text = "MUHGOUB"
+                    Toast.makeText(this, "يرجى منح صلاحيات الروت من تطبيق الإدارة أولاً ⚠️", Toast.LENGTH_SHORT).show()
+                }
             }
         }.start()
     }
 
     private fun startOverlayServiceWithRoot() {
-        // تنفيذ أمر su لخدمة الرادار والقائمة العائمة لتغذية التطبيق بصلاحيات عميقة
-        requestRootPrivileges()
+        requestRootPrivileges(false)
 
         val intent = Intent(this, OverlayService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -196,11 +202,6 @@ class MainActivity : AppCompatActivity() {
     private fun setAppMode(mode: String) {
         prefs.setAppMode(mode)
         applyModeUi(mode)
-        Toast.makeText(
-            this,
-            if (mode == "turbo") "تم تفعيل وضع Kernel" else "تم تفعيل الوضع Normal",
-            Toast.LENGTH_SHORT
-        ).show()
     }
 
     private fun applyModeUi(mode: String) {
