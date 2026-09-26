@@ -171,7 +171,7 @@
             android:textSize="16sp"
             android:textStyle="bold" />
 
-        <!-- مكان عرض كلمة MUHGOUB أو أول 5 أرقام من الكيرنال باللون البرتقالي الغامق -->
+        <!-- كلمة MUHGOUB تبدأ باللون الأبيض الافتراضي -->
         <TextView
             android:id="@+id/tvKernelDisplay"
             android:layout_width="wrap_content"
@@ -179,7 +179,7 @@
             android:layout_marginTop="20dp"
             android:layout_gravity="center"
             android:text="MUHGOUB"
-            android:textColor="#FF8C00"
+            android:textColor="@color/white"
             android:textSize="11sp"
             android:textStyle="bold" />
 
