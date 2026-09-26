@@ -1,123 +1,147 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/panelRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#222222"
-    android:padding="12dp">
+    android:background="@drawable/bg_panel">
 
-    <!-- شريط السحب والعنوان -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scrollbars="none">
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
+        android:layoutDirection="rtl"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+    <!-- الهيدر العلوي -->
+    <FrameLayout
+        android:id="@+id/dragHandle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:paddingBottom="8dp">
 
-        <View
-            android:id="@+id/dragHandle"
-            android:layout_width="40dp"
-            android:layout_height="6dp"
-            android:background="#666666"
-            android:layout_weight="1"/>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/app_name"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/btnMinimize"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:text="X"
-            android:textColor="#FFFFFF"
-            android:background="#444444"/>
-    </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-    <!-- نقطة الحالة -->
-    <View
-        android:id="@+id/statusDot"
-        android:layout_width="12dp"
-        android:layout_height="12dp"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="8dp"
-        android:visibility="gone"/>
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_shield" />
 
-    <!-- شبكة الـ 12 زرار (أدوات الـ HUD) -->
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <View
+                android:id="@+id/statusDot"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_icon_circle_accent" />
+
+            <ImageButton
+                android:id="@+id/btnMinimize"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="@string/close_panel"
+                android:src="@android:drawable/ic_menu_close_clear_cancel" />
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+    <!-- شبكة أزرار الأدوات الـ 12 (بما فيها زر عدد الأعداء الأخير) -->
     <GridLayout
+        android:id="@+id/gridTools"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:columnCount="2"
-        android:alignmentMode="alignMargins"
-        android:columnOrderPreserved="false">
+        android:rowCount="6">
 
-        <Button android:id="@+id/btnTool0" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnWeight="1" android:text="إطار الأعداء" android:textColor="#FFFFFF" android:textSize="12sp" android:layout_margin="4dp"/>
-        <Button android:id="@+id/btnTool1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnWeight="1" android:text="شريط الصحة" android:textColor="#FFFFFF" android:textSize="12sp" android:layout_margin="4dp"/>
-        <Button android:id="@+id/btnTool2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnWeight="1" android:text="أسماء اللاعبين" android:textColor="#FFFFFF" android:textSize="12sp" android:layout_margin="4dp"/>
-        <Button android:id="@+id/btnTool3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnWeight="1" android:text="المسافة" android:textColor="#FFFFFF" android:textSize="12sp" android:layout_margin="4dp"/>
-        <Button android:id="@+id/btnTool4" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnWeight="1" android:text="الهيكل العظمي" android:textColor="#FFFFFF" android:textSize="12sp" android:layout_margin="4dp"/>
-        <Button android:id="@+id/btnTool5" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnWeight="1" android:text="نقطة الرأس" android:textColor="#FFFFFF" android:textSize="12sp" android:layout_margin="4dp"/>
-        <Button android:id="@+id/btnTool6" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnWeight="1" android:text="السلاح المستخدم" android:textColor="#FFFFFF" android:textSize="12sp" android:layout_margin="4dp"/>
-        <Button android:id="@+id/btnTool7" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnWeight="1" android:text="خطوط الرادار" android:textColor="#FFFFFF" android:textSize="12sp" android:layout_margin="4dp"/>
-        <Button android:id="@+id/btnTool8" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnWeight="1" android:text="تحذير القنابل" android:textColor="#FFFFFF" android:textSize="12sp" android:layout_margin="4dp"/>
-        <Button android:id="@+id/btnTool9" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnWeight="1" android:text="تنبيه الحواف" android:textColor="#FFFFFF" android:textSize="12sp" android:layout_margin="4dp"/>
-        <Button android:id="@+id/btnTool10" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnWeight="1" android:text="رقم الفريق" android:textColor="#FFFFFF" android:textSize="12sp" android:layout_margin="4dp"/>
-        <Button android:id="@+id/btnTool11" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnWeight="1" android:text="عدد الاعداء" android:textColor="#FFFFFF" android:textSize="12sp" android:layout_margin="4dp"/>
+        <Button android:id="@+id/btnTool0" style="@style/HudToggleButton" android:text="إطار الأعداء" />
+        <Button android:id="@+id/btnTool1" style="@style/HudToggleButton" android:text="شريط الصحة" />
+        <Button android:id="@+id/btnTool2" style="@style/HudToggleButton" android:text="أسماء اللاعبين" />
+        <Button android:id="@+id/btnTool3" style="@style/HudToggleButton" android:text="المسافة" />
+        <Button android:id="@+id/btnTool4" style="@style/HudToggleButton" android:text="الهيكل العظمي" />
+        <Button android:id="@+id/btnTool5" style="@style/HudToggleButton" android:text="نقطة الرأس" />
+        <Button android:id="@+id/btnTool6" style="@style/HudToggleButton" android:text="السلاح المستخدم" />
+        <Button android:id="@+id/btnTool7" style="@style/HudToggleButton" android:text="خطوط الرادار" />
+        <Button android:id="@+id/btnTool8" style="@style/HudToggleButton" android:text="تحذير القنابل" />
+        <Button android:id="@+id/btnTool9" style="@style/HudToggleButton" android:text="تنبيه الحواف" />
+        <Button android:id="@+id/btnTool10" style="@style/HudToggleButton" android:text="رقم الفريق" />
+        <Button android:id="@+id/btnTool11" style="@style/HudToggleButton" android:text="عدد الاعداء" />
 
     </GridLayout>
 
-    <!-- قسم التحكم السفلي: Bounding box -->
-    <LinearLayout
+    <!-- فاصل جمالي -->
+    <View
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_marginTop="12dp"
-        android:padding="8dp"
-        android:background="#333333">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Bounding box"
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:layout_marginBottom="4dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:weightSum="3">
-
-            <Button android:id="@+id/btnBoxOff" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Off" android:textColor="#FFFFFF" android:textSize="11sp" android:layout_margin="2dp"/>
-            <Button android:id="@+id/btnBoxFilled" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Filled" android:textColor="#FFFFFF" android:textSize="11sp" android:layout_margin="2dp"/>
-            <Button android:id="@+id/btnBoxPrecise" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Precise" android:textColor="#FFFFFF" android:textSize="11sp" android:layout_margin="2dp"/>
-        </LinearLayout>
-    </LinearLayout>
-
-    <!-- قسم التحكم السفلي: Radar line -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
+        android:layout_height="1dp"
         android:layout_marginTop="8dp"
-        android:padding="8dp"
-        android:background="#333333">
+        android:layout_marginBottom="6dp"
+        android:background="#22FFFFFF" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Radar line"
-            android:textColor="#FFFFFF"
-            android:textSize="12sp"
-            android:layout_marginBottom="4dp"/>
+    <!-- قسم Bounding box -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Bounding Box"
+        android:textColor="@color/text_secondary"
+        android:textSize="10sp"
+        android:textStyle="bold" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:weightSum="3">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:orientation="horizontal">
 
-            <Button android:id="@+id/btnRadarOff" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Off" android:textColor="#FFFFFF" android:textSize="11sp" android:layout_margin="2dp"/>
-            <Button android:id="@+id/btnRadarTop" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Top" android:textColor="#FFFFFF" android:textSize="11sp" android:layout_margin="2dp"/>
-            <Button android:id="@+id/btnRadarBottom" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Bottom" android:textColor="#FFFFFF" android:textSize="11sp" android:layout_margin="2dp"/>
-        </LinearLayout>
+        <Button android:id="@+id/btnBoxOff" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Off" />
+        <Button android:id="@+id/btnBoxFilled" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Filled" />
+        <Button android:id="@+id/btnBoxPrecise" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Precise" />
+
     </LinearLayout>
 
-</LinearLayout>
+    <!-- قسم Radar Line -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Radar Line"
+        android:textColor="@color/text_secondary"
+        android:textSize="10sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:orientation="horizontal">
+
+        <Button android:id="@+id/btnRadarOff" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Off" />
+        <Button android:id="@+id/btnRadarTop" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Top" />
+        <Button android:id="@+id/btnRadarBottom" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Bottom" />
+
+    </LinearLayout>
+
+    </LinearLayout>
+    </ScrollView>
+</FrameLayout>
