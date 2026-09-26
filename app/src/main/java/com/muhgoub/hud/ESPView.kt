@@ -56,26 +56,25 @@ class ESPView(context: Context) : View(context) {
                     if (libBase != 0L) {
                         statusMessage = "PID: $currentPid | LIVE"
                         
-                        // ==========================================
-                        // ضع هنا أوفسيت الـ ViewMatrix الخاص بنسختك الحالية
-                        // ==========================================
-                        val matrixOffset = 0x0L // استبدل الصفر بالأوفسيت الحقيقي للمصفوفة
-                        if (matrixOffset != 0L) {
-                            viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + matrixOffset)
-                        }
+                        // 1. قراءة الـ ViewMatrix الفعلية بإضافة الـ Offset الخاص بالنسخة
+                        // val matrixOffset = 0x0L
+                        // if (matrixOffset != 0L) {
+                        //     viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + matrixOffset)
+                        // }
 
-                        // ==========================================
-                        // قراءة قائمة الكائنات والأعداء (Entity List)
-                        // ==========================================
+                        // 2. قراءة قائمة الكائنات والأعداء (Entity Loop)
                         synchronized(playerList) {
                             playerList.clear()
                             
-                            // مثال لقراءة إحداثيات لاعب عبر مؤشر (Pointer) الأوفسيت الخاص بك:
-                            // val entityListOffset = 0x0L
-                            // val worldBase = MemoryUtils.readLong(currentPid, libBase + entityListOffset)
-                            // هنا يتم إضافة حلقة لوب لجلب إحداثيات كل لاعب وحفظها:
-                            // val pos = MemoryUtils.readVector3(currentPid, playerAddress)
-                            // if (pos.x != 0f) playerList.add(pos)
+                            val entityCount = 5 // عدد الكائنات المراد فحصها افتراضياً
+                            for (i in 0 until entityCount) {
+                                // حساب عنوان الكائن أو اللاعب الحالي وإضافته للقائمة
+                                // val entityAddress = ...
+                                // val pos = MemoryUtils.readVector3(currentPid, entityAddress)
+                                // if (pos.x != 0f && pos.y != 0f) {
+                                //     playerList.add(pos)
+                                // }
+                            }
                         }
                     } else {
                         statusMessage = "PID: $currentPid | WAITING FOR LIB..."
@@ -84,7 +83,7 @@ class ESPView(context: Context) : View(context) {
                     statusMessage = "WAITING FOR PUBG..."
                 }
 
-                    withContext(Dispatchers.Main) {
+                withContext(Dispatchers.Main) {
                     invalidate()
                 }
                 delay(25L)
