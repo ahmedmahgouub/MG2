@@ -9,13 +9,6 @@ import kotlinx.coroutines.*
 
 class ESPView(context: Context) : View(context) {
 
-    private val boxPaint = Paint().apply {
-        color = Color.GREEN
-        style = Paint.Style.STROKE
-        strokeWidth = 3f
-        isAntiAlias = true
-    }
-
     private val textPaint = Paint().apply {
         color = Color.GREEN
         textSize = 28f
@@ -38,6 +31,10 @@ class ESPView(context: Context) : View(context) {
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
+    // إزحافات النسخة 64-bit المستخرجة من المصدر
+    private val GWORLD_OFFSET = 0xF624D40L
+    private val VIEW_WORLD_OFFSET = 0xF5FBFD0L
+
     init {
         startLoop()
     }
@@ -54,26 +51,22 @@ class ESPView(context: Context) : View(context) {
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        statusMessage = "PID: $currentPid | LIVE"
+                        statusMessage = "PID: $currentPid | LIVE (x64)"
                         
-                        // 1. قراءة الـ ViewMatrix الفعلية بإضافة الـ Offset الخاص بالنسخة
-                        // val matrixOffset = 0x0L
-                        // if (matrixOffset != 0L) {
-                        //     viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + matrixOffset)
-                        // }
+                        // 1. قراءة الـ ViewMatrix باستخدام أوفسيت x64 الحقيقي
+                        viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
 
-                        // 2. قراءة قائمة الكائنات والأعداء (Entity Loop)
+                        // 2. قراءة العالم والكائنات عبر GWorld (0xF624D40)
+                        val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_OFFSET)
+                        
                         synchronized(playerList) {
                             playerList.clear()
                             
-                            val entityCount = 5 // عدد الكائنات المراد فحصها افتراضياً
-                            for (i in 0 until entityCount) {
-                                // حساب عنوان الكائن أو اللاعب الحالي وإضافته للقائمة
-                                // val entityAddress = ...
-                                // val pos = MemoryUtils.readVector3(currentPid, entityAddress)
-                                // if (pos.x != 0f && pos.y != 0f) {
-                                //     playerList.add(pos)
-                                // }
+                            // كمرحلة تجريبية أولية لتأكيد عمل المصفوفة والأوفسيت:
+                            // لو قدرنا نقرأ الـ GWorld بنجاح، هنضيف نقطة اختبارية أمام الشاشة
+                            if (gWorldPtr != 0L) {
+                                // نقطة اختبار مركزية مرتبطة بالعالم الافتراضي للتأكد من التطابق
+                                playerList.add(MemoryUtils.Vector3(0f, 0f, 100f))
                             }
                         }
                     } else {
@@ -97,7 +90,7 @@ class ESPView(context: Context) : View(context) {
         // رسم الحالة وعنوان الأساس أعلى الشاشة
         canvas.drawText(statusMessage, 50f, 150f, textPaint)
 
-        // رسم الأعداء الحقيقيين فور امتلاء القائمة بالإحداثيات
+        // رسم العناصر المحولة من الذاكرة الحقيقية إلى الشاشة
         synchronized(playerList) {
             for (player in playerList) {
                 val pt = MemoryUtils.worldToScreen(player, viewMatrix, width, height)
@@ -107,7 +100,7 @@ class ESPView(context: Context) : View(context) {
                     val r = pt.x + 40f
                     val b = pt.y + 100f
                     canvas.drawRect(l, t, r, b, enemyBoxPaint)
-                    canvas.drawText("Enemy", l, t - 8f, textPaint)
+                    canvas.drawText("Target [OK]", l, t - 8f, textPaint)
                 }
             }
         }
