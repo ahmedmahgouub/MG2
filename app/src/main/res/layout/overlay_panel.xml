@@ -1,178 +1,162 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/panelRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/panel_background"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:background="@drawable/bg_panel">
 
-    <!-- رأس القائمة -->
-    <RelativeLayout
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scrollbars="none">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layoutDirection="rtl"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+    <FrameLayout
         android:id="@+id/dragHandle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingBottom="12dp">
-
-        <ImageButton
-            android:id="@+id/btnMinimize"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:layout_alignParentStart="true"
-            android:layout_centerVertical="true"
-            android:background="@drawable/circle_button_bg"
-            android:contentDescription="إغلاق"
-            android:src="@drawable/ic_close" />
-
-        <View
-            android:id="@+id/statusDot"
-            android:layout_width="10dp"
-            android:layout_height="10dp"
-            android:layout_toEndOf="@id/btnMinimize"
-            android:layout_marginStart="8dp"
-            android:layout_centerVertical="true"
-            android:background="@drawable/green_dot" />
+        android:paddingBottom="8dp">
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
-            android:text="MUHGOUB"
-            android:textColor="#FFFFFF"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_centerVertical="true"
-            android:text="VERSION 1.0"
-            android:textColor="#00E5FF"
+            android:gravity="center"
+            android:text="@string/app_name"
+            android:textColor="@color/text_primary"
             android:textSize="12sp"
             android:textStyle="bold" />
-    </RelativeLayout>
-
-    <!-- محتوى القائمة القابل للتمرير -->
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:scrollbars="none">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-            <!-- شبكة الأدوات الـ 12 بترتيبها الصحيح -->
-            <GridLayout
-                android:id="@+id/gridTools"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:columnCount="2"
-                android:useDefaultMargins="true">
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_shield" />
 
-                <CheckBox android:id="@+id/btnTool0" style="@style/HudCheckBoxStyle" android:text="إطار الأعداء" />
-                <CheckBox android:id="@+id/btnTool1" style="@style/HudCheckBoxStyle" android:text="شريط الصحة" />
-                <CheckBox android:id="@+id/btnTool2" style="@style/HudCheckBoxStyle" android:text="أسماء اللاعبين" />
-                <CheckBox android:id="@+id/btnTool3" style="@style/HudCheckBoxStyle" android:text="المسافة" />
-                <CheckBox android:id="@+id/btnTool4" style="@style/HudCheckBoxStyle" android:text="الهيكل العظمي" />
-                <CheckBox android:id="@+id/btnTool5" style="@style/HudCheckBoxStyle" android:text="نقطة الرأس" />
-                <CheckBox android:id="@+id/btnTool6" style="@style/HudCheckBoxStyle" android:text="السلاح المستخدم" />
-                <CheckBox android:id="@+id/btnTool7" style="@style/HudCheckBoxStyle" android:text="خطوط الرادار" />
-                <CheckBox android:id="@+id/btnTool8" style="@style/HudCheckBoxStyle" android:text="تحذير القنابل" />
-                <CheckBox android:id="@+id/btnTool9" style="@style/HudCheckBoxStyle" android:text="تنبيه الحواف" />
-                <CheckBox android:id="@+id/btnTool10" style="@style/HudCheckBoxStyle" android:text="رقم الفريق" />
-                <CheckBox android:id="@+id/btnTool11" style="@style/HudCheckBoxStyle" android:text="عدد الاعداء" />
-
-            </GridLayout>
-
-            <!-- فاصل -->
             <View
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="1dp"
-                android:layout_marginVertical="10dp"
-                android:background="#33FFFFFF" />
+                android:layout_weight="1" />
 
-            <!-- قسم Bounding Box -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Bounding box"
-                android:textColor="#AAAAAA"
-                android:textSize="14sp"
-                android:layout_marginBottom="6dp" />
+            <View
+                android:id="@+id/statusDot"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_icon_circle_accent" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:weightSum="3">
-
-                <RadioButton android:id="@+id/btnBoxOff" style="@style/HudRadioButtonStyle" android:layout_width="0dp" android:layout_weight="1" android:text="Off" />
-                <RadioButton android:id="@+id/btnBoxFilled" style="@style/HudRadioButtonStyle" android:layout_width="0dp" android:layout_weight="1" android:text="Filled" />
-                <RadioButton android:id="@+id/btnBoxPrecise" style="@style/HudRadioButtonStyle" android:layout_width="0dp" android:layout_weight="1" android:text="Precise" />
-            </LinearLayout>
-
-            <!-- قسم Radar Line -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Radar line"
-                android:textColor="#AAAAAA"
-                android:textSize="14sp"
-                android:layout_marginTop="12dp"
-                android:layout_marginBottom="6dp" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:weightSum="4">
-
-                <RadioButton android:id="@+id/btnRadarOff" style="@style/HudRadioButtonStyle" android:layout_width="0dp" android:layout_weight="1" android:text="Off" />
-                <RadioButton android:id="@+id/btnRadarTop" style="@style/HudRadioButtonStyle" android:layout_width="0dp" android:layout_weight="1" android:text="Top" />
-                <RadioButton android:id="@+id/btnRadarCenter" style="@style/HudRadioButtonStyle" android:layout_width="0dp" android:layout_weight="1" android:text="Center" />
-                <RadioButton android:id="@+id/btnRadarBottom" style="@style/HudRadioButtonStyle" android:layout_width="0dp" android:layout_weight="1" android:text="Bottom" />
-            </LinearLayout>
-
-            <!-- خيار إخفاء التصوير -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <Switch
-                    android:id="@+id/switchHideRecording"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="12dp"
-                    android:text="إخفاء التصوير\nيجب منح صلاحية العرض فوق التطبيقات الأخرى أولاً"
-                    android:textColor="#FFFFFF"
-                    android:textSize="12sp" />
-            </LinearLayout>
+            <ImageButton
+                android:id="@+id/btnMinimize"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="@string/close_panel"
+                android:src="@android:drawable/ic_menu_close_clear_cancel" />
 
         </LinearLayout>
-    </ScrollView>
+    </FrameLayout>
 
-    <!-- زر إيقاف القائمة بالأسفل -->
-    <Button
-        android:id="@+id/btnStopService"
+    <!-- شبكة أزرار الأدوات الـ 12 بالأسماء الجديدة -->
+    <GridLayout
+        android:id="@+id/gridTools"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginTop="12dp"
-        android:background="@drawable/stop_button_bg"
-        android:text="إيقاف القائمة"
-        android:textColor="#FFFFFF"
-        android:textSize="16sp"
+        android:layout_height="wrap_content"
+        android:columnCount="2"
+        android:rowCount="6">
+
+        <Button android:id="@+id/btnTool0" style="@style/HudToggleButton" android:text="إطار الأعداء" />
+        <Button android:id="@+id/btnTool1" style="@style/HudToggleButton" android:text="شريط الصحة" />
+        <Button android:id="@+id/btnTool2" style="@style/HudToggleButton" android:text="أسماء اللاعبين" />
+        <Button android:id="@+id/btnTool3" style="@style/HudToggleButton" android:text="المسافة" />
+        <Button android:id="@+id/btnTool4" style="@style/HudToggleButton" android:text="الهيكل العظمي" />
+        <Button android:id="@+id/btnTool5" style="@style/HudToggleButton" android:text="نقطة الرأس" />
+        <Button android:id="@+id/btnTool6" style="@style/HudToggleButton" android:text="السلاح المستخدم" />
+        <Button android:id="@+id/btnTool7" style="@style/HudToggleButton" android:text="خطوط الرادار" />
+        <Button android:id="@+id/btnTool8" style="@style/HudToggleButton" android:text="تحذير القنابل" />
+        <Button android:id="@+id/btnTool9" style="@style/HudToggleButton" android:text="تنبيه الحواف" />
+        <Button android:id="@+id/btnTool10" style="@style/HudToggleButton" android:text="رقم الفريق" />
+        <Button android:id="@+id/btnTool11" style="@style/HudToggleButton" android:text="عدد الاعداء" />
+
+    </GridLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="6dp"
+        android:background="#22FFFFFF" />
+
+    <!-- قسم Bounding box (الخيارات الفرعية الأولى) -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Bounding box"
+        android:textColor="@color/text_secondary"
+        android:textSize="10sp"
         android:textStyle="bold" />
 
-</LinearLayout>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <RadioButton android:id="@+id/rbAlignBottom" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Precise" />
+            <RadioButton android:id="@+id/rbAlignMid" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Filled" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:orientation="horizontal">
+
+            <RadioButton android:id="@+id/rbAlignTop" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Off" />
+            <!-- زر احتياطي متوافق مع بنية الكود القديمة لمنع أي خطأ مفقود -->
+            <RadioButton android:id="@+id/rbAlignOff" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Off" android:visibility="gone" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- قسم Radar line (الخيارات الفرعية الثانية) -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Radar line"
+        android:textColor="@color/text_secondary"
+        android:textSize="10sp"
+        android:textStyle="bold" />
+
+    <RadioGroup
+        android:id="@+id/radioStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:orientation="horizontal">
+
+        <RadioButton android:id="@+id/rbStatusPrcs" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Bottom" />
+        <RadioButton android:id="@+id/rbStatusFill" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Center" />
+        <RadioButton android:id="@+id/rbStatusOff" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Top" />
+
+    </RadioGroup>
+
+    </LinearLayout>
+    </ScrollView>
+</FrameLayout>
