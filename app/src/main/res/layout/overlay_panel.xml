@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ملحوظة مهمة: الحجم الحقيقي للنافذة العائمة اتحدد في كود OverlayService.kt (بالبكسل)
+     مش هنا، لأن أندرويد بيتجاهل مقاس الـ layout الجذري لما يكون النوافذ مضافة
+     مباشرة عن طريق WindowManager. الـ match_parent هنا معناها املا حجم النافذة
+     المحدد في الكود، مش تحديد حجم فعلي. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/panelRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_panel">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scrollbars="none">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layoutDirection="rtl"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+    <!-- الهيدر العلوي: لوجو + عنوان + مؤشر حالة + زر إغلاق/تصغير.
+         اتحول لـ FrameLayout عشان كلمة "MUHGOUB" تتحط في نص عرض القائمة
+         العايمة بالظبط (منتصف هندسي حقيقي)، مش نص المسافة المتبقية بعد
+         اللوجو والأزرار زي ما كان قبل كده. النص بياخد عرض الهيدر بالكامل
+         ويتمركز فيه، واللوجو ومؤشر الحالة وزرار الإغلاق بيترسموا فوقه في
+         طبقة تانية شفافة من غير ما يأثروا على تمركز النص. -->
+    <FrameLayout
+        android:id="@+id/dragHandle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/app_name"
+            android:textColor="@color/text_primary"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:src="@drawable/ic_shield" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <View
+                android:id="@+id/statusDot"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_icon_circle_accent" />
+
+            <ImageButton
+                android:id="@+id/btnMinimize"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="@string/close_panel"
+                android:src="@android:drawable/ic_menu_close_clear_cancel" />
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+    <!-- شبكة أزرار الأدوات الـ 12: عمودين × 6 صفوف (6 جمب 6). القائمة بقى عرضها
+         6 سم بدل 4 سم عشان ميبقاش المكان زحمة، وكل زرار بقى شكله "شريحة"
+         (chip) بخلفية أخضر/رمادي حسب حالة التفعيل. -->
+    <GridLayout
+        android:id="@+id/gridTools"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:columnCount="2"
+        android:rowCount="6">
+
+        <Button android:id="@+id/btnTool0" style="@style/HudToggleButton" android:text="رقم 1" />
+        <Button android:id="@+id/btnTool1" style="@style/HudToggleButton" android:text="رقم 2" />
+        <Button android:id="@+id/btnTool2" style="@style/HudToggleButton" android:text="رقم 3" />
+        <Button android:id="@+id/btnTool3" style="@style/HudToggleButton" android:text="رقم 4" />
+        <Button android:id="@+id/btnTool4" style="@style/HudToggleButton" android:text="رقم 5" />
+        <Button android:id="@+id/btnTool5" style="@style/HudToggleButton" android:text="رقم 6" />
+        <Button android:id="@+id/btnTool6" style="@style/HudToggleButton" android:text="رقم 7" />
+        <Button android:id="@+id/btnTool7" style="@style/HudToggleButton" android:text="رقم 8" />
+        <Button android:id="@+id/btnTool8" style="@style/HudToggleButton" android:text="رقم 9" />
+        <Button android:id="@+id/btnTool9" style="@style/HudToggleButton" android:text="رقم 10" />
+        <Button android:id="@+id/btnTool10" style="@style/HudToggleButton" android:text="الحبل" />
+        <Button android:id="@+id/btnTool11" style="@style/HudToggleButton" android:text="تم" />
+
+    </GridLayout>
+
+    <!-- فاصل جمالي خفيف -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="6dp"
+        android:background="#22FFFFFF" />
+
+    <!-- قسم محاذاة الأساسيات (Core Alignment): صفين X2 بدل صف واحد X4 عشان يتسع في العرض الضيق.
+         مش RadioGroup عادي (عشان أندرويد ميدعمش RadioGroup ملفوف على أكتر من سطر)،
+         التحديد المتبادل بين الأربعة بيتعمل يدوي في OverlayService.kt -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/section_core_align"
+        android:textColor="@color/text_secondary"
+        android:textSize="10sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <RadioButton android:id="@+id/rbAlignBottom" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/align_bottom" />
+            <RadioButton android:id="@+id/rbAlignMid" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/align_mid" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:orientation="horizontal">
+
+            <RadioButton android:id="@+id/rbAlignTop" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/align_top" />
+            <RadioButton android:id="@+id/rbAlignOff" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/align_off" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- قسم الحالة (Status) -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="@string/section_status"
+        android:textColor="@color/text_secondary"
+        android:textSize="10sp"
+        android:textStyle="bold" />
+
+    <RadioGroup
+        android:id="@+id/radioStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:orientation="horizontal">
+
+        <RadioButton android:id="@+id/rbStatusPrcs" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/status_prcs" />
+        <RadioButton android:id="@+id/rbStatusFill" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/status_fill" />
+        <RadioButton android:id="@+id/rbStatusOff" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="@string/status_off" />
+
+    </RadioGroup>
+
+    </LinearLayout>
+    </ScrollView>
+</FrameLayout>
