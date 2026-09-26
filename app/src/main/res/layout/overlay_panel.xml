@@ -66,7 +66,7 @@
         </LinearLayout>
     </FrameLayout>
 
-    <!-- شبكة أزرار الأدوات الـ 12 بالأسماء الجديدة -->
+    <!-- شبكة أزرار الأدوات الـ 12 الأساسية -->
     <GridLayout
         android:id="@+id/gridTools"
         android:layout_width="match_parent"
@@ -96,7 +96,7 @@
         android:layout_marginBottom="6dp"
         android:background="#22FFFFFF" />
 
-    <!-- قسم Bounding box (الخيارات الفرعية الأولى) -->
+    <!-- قسم Bounding box (3 خيارات جمب بعض) -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -105,36 +105,20 @@
         android:textSize="10sp"
         android:textStyle="bold" />
 
-    <LinearLayout
+    <RadioGroup
+        android:id="@+id/radioBoundingBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
-        android:orientation="vertical">
+        android:orientation="horizontal">
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
+        <RadioButton android:id="@+id/rbBoxPrecise" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Precise" />
+        <RadioButton android:id="@+id/rbBoxFilled" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Filled" />
+        <RadioButton android:id="@+id/rbBoxOff" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Off" />
 
-            <RadioButton android:id="@+id/rbAlignBottom" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Precise" />
-            <RadioButton android:id="@+id/rbAlignMid" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Filled" />
+    </RadioGroup>
 
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:orientation="horizontal">
-
-            <RadioButton android:id="@+id/rbAlignTop" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Off" />
-            <!-- زر احتياطي متوافق مع بنية الكود القديمة لمنع أي خطأ مفقود -->
-            <RadioButton android:id="@+id/rbAlignOff" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Off" android:visibility="gone" />
-
-        </LinearLayout>
-    </LinearLayout>
-
-    <!-- قسم Radar line (الخيارات الفرعية الثانية) -->
+    <!-- قسم Radar line (4 خيارات جمب بعض) -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -145,15 +129,16 @@
         android:textStyle="bold" />
 
     <RadioGroup
-        android:id="@+id/radioStatus"
+        android:id="@+id/radioRadarLine"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:orientation="horizontal">
 
-        <RadioButton android:id="@+id/rbStatusPrcs" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Bottom" />
-        <RadioButton android:id="@+id/rbStatusFill" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Center" />
-        <RadioButton android:id="@+id/rbStatusOff" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Top" />
+        <RadioButton android:id="@+id/rbRadarBottom" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Bottom" />
+        <RadioButton android:id="@+id/rbRadarCenter" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Center" />
+        <RadioButton android:id="@+id/rbRadarTop" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Top" />
+        <RadioButton android:id="@+id/rbRadarOff" style="@style/HudRadioButton" android:layout_width="0dp" android:layout_weight="1" android:text="Off" />
 
     </RadioGroup>
 
