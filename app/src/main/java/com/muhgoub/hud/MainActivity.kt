@@ -23,9 +23,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var switchPermission: Switch
     private lateinit var tvMahgoub: TextView
 
-    private var currentMode = "normal"
-    private var hasRequestedRoot = false // لضمان طلب الروت الحقيقي مرة واحدة فقط
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -68,19 +65,16 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "تم إيقاف الرادار", Toast.LENGTH_SHORT).show()
         }
 
-        // زر Normal (يطلب صلاحية الروت الحقيقية عند أول ضغطة فقط)
+        // زر Normal
         btnModeNormal.setOnClickListener {
-            currentMode = "normal"
             Toast.makeText(this, "تم التفعيل على وضع: Normal", Toast.LENGTH_SHORT).show()
-            checkAndRequestRootOnce()
+            requestRootAndTest()
         }
 
-        // زر Kernel (يطلب الروت أول ضغطة + يجيب أول 5 أرقام من الكيرنال مكان محجوب باللون البرتقالي الغامق)
+        // زر Kernel (يطلب الروت ويجيب الكيرنال مكان محجوب باللون البرتقالي)
         btnModeTurbo.setOnClickListener {
-            currentMode = "kernel"
             Toast.makeText(this, "تم التفعيل على وضع: Kernel", Toast.LENGTH_SHORT).show()
-            checkAndRequestRootOnce()
-            fetchKernelVersionAndDisplay()
+            fetchKernelVersionWithRoot()
         }
 
         switchPermission.setOnCheckedChangeListener { _, isChecked ->
@@ -90,32 +84,33 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // دالة لطلب الروت الحقيقي مرة واحدة فقط
-    private fun checkAndRequestRootOnce() {
-        if (!hasRequestedRoot) {
-            hasRequestedRoot = true
-            requestRealRootPermission()
-        }
-    }
-
-    private fun requestRealRootPermission() {
+    private fun requestRootAndTest() {
         Thread {
             try {
-                // تنفيذ أمر su حقيقي لإجبار تطبيق الروت (Magisk / KernelSU) على إظهار نافذة الإذن للمستخدم
-                val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
-                process.waitFor()
+                val process = ProcessBuilder("su", "-c", "id").start()
+                val exitCode = process.waitFor()
+                runOnUiThread {
+                    if (exitCode == 0) {
+                        Toast.makeText(this, "تم منح صلاحيات الروت بنجاح!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this, "تم رفض صلاحية الروت", Toast.LENGTH_SHORT).show()
+                    }
+                }
             } catch (e: Exception) {
-                // تجاهل بأمان
+                runOnUiThread {
+                    Toast.makeText(this, "خطأ في طلب الروت", Toast.LENGTH_SHORT).show()
+                }
             }
         }.start()
     }
 
-    // جلب كيرنال الجهاز الحقيقي واستخراج أول 5 أرقام فقط وعرضها مكان كلمة محجوب باللون البرتقالي الغامق
-    private fun fetchKernelVersionAndDisplay() {
+    // جلب كيرنال الجهاز باستخدام su لإجبار ظهور نافذة الروت، واستخراج أول 5 أرقام باللون البرتقالي
+    private fun fetchKernelVersionWithRoot() {
         Thread {
             var kernelStr = ""
             try {
-                val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "uname -r"))
+                // استخدام ProcessBuilder لتنفيذ أمر الكيرنال بصلاحيات الروت
+                val process = ProcessBuilder("su", "-c", "uname -r").start()
                 val reader = BufferedReader(InputStreamReader(process.inputStream))
                 val line = reader.readLine()
                 if (!line.isNullOrEmpty()) {
@@ -126,6 +121,7 @@ class MainActivity : AppCompatActivity() {
                 kernelStr = ""
             }
 
+            // لو فشل لسبب ما، نجرب قراءته بالطريقة العادية
             if (kernelStr.isEmpty()) {
                 try {
                     val process = Runtime.getRuntime().exec("uname -r")
@@ -144,7 +140,7 @@ class MainActivity : AppCompatActivity() {
                 kernelStr = Build.VERSION.INCREMENTAL ?: "6.1.1"
             }
 
-            // استخراج أول 5 أرقام أو رموز كحد أقصى من نص الكيرنال
+            // استخراج أول 5 أرقام فقط
             val first5 = if (kernelStr.length >= 5) kernelStr.substring(0, 5) else kernelStr
 
             runOnUiThread {
