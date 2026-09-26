@@ -81,9 +81,9 @@
     <!-- زر تشغيل الرادار الأساسي -->
     <Button
         android:id="@+id/btnStartOverlay"
-        style="@style/HudMainButtonStyle"
         android:layout_width="match_parent"
         android:layout_height="56dp"
+        android:background="@drawable/bg_button_primary"
         android:text="تشغيل الرادار"
         android:textColor="@color/text_primary"
         android:textSize="16sp"
@@ -109,21 +109,21 @@
 
         <Button
             android:id="@+id/btnSuperMode"
-            style="@style/HudMainButtonStyle"
             android:layout_width="0dp"
             android:layout_height="50dp"
             android:layout_weight="1"
             android:layout_marginStart="8dp"
+            android:background="@drawable/bg_button_primary"
             android:text="Normal"
             android:textColor="@color/text_primary"
             android:textSize="14sp" />
 
         <Button
             android:id="@+id/btnNormalMode"
-            style="@style/HudMainButtonStyle"
             android:layout_width="0dp"
             android:layout_height="50dp"
             android:layout_weight="1"
+            android:background="@drawable/bg_button_primary"
             android:text="Kernel"
             android:textColor="@color/text_primary"
             android:textSize="14sp" />
@@ -176,9 +176,9 @@
     <!-- زر إيقاف الرادار -->
     <Button
         android:id="@+id/btnStopOverlay"
-        style="@style/HudMainButtonStyle"
         android:layout_width="match_parent"
         android:layout_height="56dp"
+        android:background="@drawable/bg_button_primary"
         android:text="إيقاف الرادار"
         android:textColor="@color/text_primary"
         android:textSize="16sp"
