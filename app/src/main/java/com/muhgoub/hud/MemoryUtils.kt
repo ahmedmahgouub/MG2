@@ -5,7 +5,6 @@ import java.io.InputStreamReader
 
 object MemoryUtils {
 
-    // دالة للبحث عن رقم العملية (PID) الخاصة بلعبة ببجي
     fun findProcessId(packageName: String): Int {
         var pid = -1
         try {
@@ -22,14 +21,30 @@ object MemoryUtils {
         return pid
     }
 
-    // فئة بسيطة لتمثيل إحداثيات الشاشة (2D)
     data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
-
-    // فئة لتمثيل الإحداثيات ثلاثية الأبعاد (3D) داخل اللعبة
     data class Vector3(val x: Float, val y: Float, val z: Float)
 
-    // معادلة تحويل الإحداثيات من 3D إلى 2D (World to Screen)
-    // تعتمد على مصفوفة الكاميرا وحجم الشاشة لتحديد مكان اللاعب بدقة بالمللي
+    // دالة قراءة الذاكرة عبر الروت باستخدام أداة dd لمسح العنوان المطلوب بدقة
+    fun readFloat(pid: Int, address: Long): Float {
+        try {
+            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=4 2>/dev/null"
+            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
+            val inputStream = process.inputStream
+            val buffer = ByteArray(4)
+            val bytesRead = inputStream.read(buffer)
+            process.waitFor()
+            if (bytesRead == 4) {
+                return java.nio.ByteBuffer.wrap(buffer)
+                    .order(java.nio.ByteOrder.LITTLE_ENDIAN)
+                    .float
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return 0f
+    }
+
+    // معادلة تحويل الإحداثيات من 3D إلى 2D
     fun worldToScreen(worldLocation: Vector3, matrix: FloatArray, screenWidth: Int, screenHeight: Int): Point2D {
         val w = matrix[3] * worldLocation.x + matrix[7] * worldLocation.y + matrix[11] * worldLocation.z + matrix[15]
 
