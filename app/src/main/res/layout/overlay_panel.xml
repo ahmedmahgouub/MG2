@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- ملحوظة مهمة: الحجم الحقيقي للنافذة العائمة اتحدد في كود OverlayService.kt (بالبكسل)
-     مش هنا، لأن أندرويد بيتجاهل مقاس الـ layout الجذري لما يكون النوافذ مضافة
-     مباشرة عن طريق WindowManager. الـ match_parent هنا معناها املا حجم النافذة
-     المحدد في الكود، مش تحديد حجم فعلي. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/panelRoot"
     android:layout_width="match_parent"
@@ -128,7 +124,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        adjustViewBounds="true"
         android:text="Radar line"
         android:textColor="@color/text_secondary"
         android:textSize="10sp"
