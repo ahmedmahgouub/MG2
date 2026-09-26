@@ -198,34 +198,34 @@ class OverlayService : Service() {
     }
 
     private fun bindRadioGroups(root: View) {
-        val alignButtons = mapOf(
-            root.findViewById<android.widget.RadioButton>(R.id.rbAlignBottom) to "bottom",
-            root.findViewById<android.widget.RadioButton>(R.id.rbAlignMid) to "mid",
-            root.findViewById<android.widget.RadioButton>(R.id.rbAlignTop) to "top",
-            root.findViewById<android.widget.RadioButton>(R.id.rbAlignOff) to "off"
+        val boxButtons = mapOf(
+            root.findViewById<android.widget.RadioButton>(R.id.rbBoxPrecise) to "precise",
+            root.findViewById<android.widget.RadioButton>(R.id.rbBoxFilled) to "filled",
+            root.findViewById<android.widget.RadioButton>(R.id.rbBoxOff) to "off"
         )
-        fun refreshAlignChecks(selected: String) {
-            alignButtons.forEach { (btn, value) -> btn?.isChecked = (value == selected) }
+        fun refreshBoxChecks(selected: String) {
+            boxButtons.forEach { (btn, value) -> btn?.isChecked = (value == selected) }
         }
-        refreshAlignChecks(prefs.getCoreAlign())
-        alignButtons.forEach { (btn, value) ->
+        refreshBoxChecks(prefs.getCoreAlign())
+        boxButtons.forEach { (btn, value) ->
             btn?.setOnClickListener {
                 prefs.setCoreAlign(value)
-                refreshAlignChecks(value)
+                refreshBoxChecks(value)
                 applyCoreAlign(value)
             }
         }
 
-        val statusGroup = root.findViewById<RadioGroup>(R.id.radioStatus)
-        val idToStatus = mapOf(
-            R.id.rbStatusPrcs to "prcs",
-            R.id.rbStatusFill to "fill",
-            R.id.rbStatusOff to "off"
+        val radarGroup = root.findViewById<RadioGroup>(R.id.radioRadarLine)
+        val idToRadar = mapOf(
+            R.id.rbRadarBottom to "bottom",
+            R.id.rbRadarCenter to "center",
+            R.id.rbRadarTop to "top",
+            R.id.rbRadarOff to "off"
         )
-        val statusToId = idToStatus.entries.associate { (k, v) -> v to k }
-        statusGroup?.check(statusToId[prefs.getStatusMode()] ?: R.id.rbStatusFill)
-        statusGroup?.setOnCheckedChangeListener { _, checkedId ->
-            val value = idToStatus[checkedId] ?: return@setOnCheckedChangeListener
+        val radarToId = idToRadar.entries.associate { (k, v) -> v to k }
+        radarGroup?.check(radarToId[prefs.getStatusMode()] ?: R.id.rbRadarCenter)
+        radarGroup?.setOnCheckedChangeListener { _, checkedId ->
+            val value = idToRadar[checkedId] ?: return@setOnCheckedChangeListener
             prefs.setStatusMode(value)
             applyStatusMode(root, value)
         }
@@ -239,8 +239,8 @@ class OverlayService : Service() {
         }
 
         val gravity = when (value) {
-            "top" -> Gravity.TOP or Gravity.START
-            "mid" -> Gravity.CENTER_VERTICAL or Gravity.START
+            "filled" -> Gravity.CENTER_VERTICAL or Gravity.START
+            "precise" -> Gravity.TOP or Gravity.START
             else -> Gravity.BOTTOM or Gravity.START
         }
 
@@ -259,8 +259,8 @@ class OverlayService : Service() {
     private fun applyStatusMode(root: View, value: String) {
         val dot = root.findViewById<View>(R.id.statusDot) ?: return
         when (value) {
-            "prcs" -> { dot.visibility = View.VISIBLE; dot.setBackgroundResource(R.drawable.bg_icon_circle_gray) }
-            "fill" -> { dot.visibility = View.VISIBLE; dot.setBackgroundResource(R.drawable.bg_icon_circle_accent) }
+            "bottom" -> { dot.visibility = View.VISIBLE; dot.setBackgroundResource(R.drawable.bg_icon_circle_gray) }
+            "center", "top" -> { dot.visibility = View.VISIBLE; dot.setBackgroundResource(R.drawable.bg_icon_circle_accent) }
             "off" -> dot.visibility = View.GONE
         }
     }
@@ -446,7 +446,7 @@ class OverlayService : Service() {
                         it.y = params.y
                         panelView?.let { pv -> runCatching { windowManager.updateViewLayout(pv, it) } }
                     }
-                    return true
+                    return typeTrue()
                 }
                 MotionEvent.ACTION_UP -> {
                     prefs.setOverlayPosition(params.x, params.y)
@@ -456,5 +456,7 @@ class OverlayService : Service() {
             }
             return false
         }
+        
+        private fun typeTrue(): Boolean = true
     }
 }
