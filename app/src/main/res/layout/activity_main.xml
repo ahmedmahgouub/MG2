@@ -169,7 +169,7 @@
 
         </LinearLayout>
 
-        <!-- زر تشغيل الرادار (نستخدم Button عادي مع إضافة خاصية android:clickable="true" و android:focusable="true") -->
+        <!-- زر تشغيل الرادار (تم ضبط الـ padding و stateListAnimator لمنع موت التاتش) -->
         <Button
             android:id="@+id/btnLaunchPanel"
             android:layout_width="match_parent"
@@ -178,6 +178,9 @@
             android:background="@drawable/bg_main_button"
             android:clickable="true"
             android:focusable="true"
+            android:stateListAnimator="@null"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
             android:text="تشغيل الرادار"
             android:textColor="@color/white"
             android:textSize="16sp"
@@ -220,6 +223,9 @@
                 android:background="@drawable/bg_segment_outline"
                 android:clickable="true"
                 android:focusable="true"
+                android:stateListAnimator="@null"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
                 android:text="Kernel"
                 android:textColor="@color/white"
                 android:textSize="13sp"
@@ -233,6 +239,9 @@
                 android:background="@drawable/bg_segment_filled"
                 android:clickable="true"
                 android:focusable="true"
+                android:stateListAnimator="@null"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
                 android:text="Normal"
                 android:textColor="@color/white"
                 android:textSize="13sp"
@@ -278,6 +287,9 @@
             android:background="@drawable/bg_main_button"
             android:clickable="true"
             android:focusable="true"
+            android:stateListAnimator="@null"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
             android:text="إيقاف الرادار"
             android:textColor="@color/white"
             android:textSize="16sp"
