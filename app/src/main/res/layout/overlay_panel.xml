@@ -68,7 +68,7 @@
 
     </FrameLayout>
 
-    <!-- شبكة أزرار الأدوات الرئيسية (متضمنة زر رقم الفريق) -->
+    <!-- شبكة أزرار الأدوات الرئيسية (12 زرار متطابقين مع كود Kotlin) -->
     <GridLayout
         android:id="@+id/gridTools"
         android:layout_width="match_parent"
@@ -87,6 +87,7 @@
         <Button android:id="@+id/btnTool8" style="@style/HudToggleButton" android:text="تحذير القنابل" />
         <Button android:id="@+id/btnTool9" style="@style/HudToggleButton" android:text="تنبيه الحواف" />
         <Button android:id="@+id/btnTool10" style="@style/HudToggleButton" android:text="رقم الفريق" />
+        <Button android:id="@+id/btnTool11" style="@style/HudToggleButton" android:text="حالة الـ HUD" />
 
     </GridLayout>
 
