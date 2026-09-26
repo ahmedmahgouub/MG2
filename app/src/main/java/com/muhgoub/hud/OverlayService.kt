@@ -197,7 +197,7 @@ class OverlayService : Service() {
     }
 
     private fun bindRadioGroups(root: View) {
-        // ربط أزرار المحاذاة (Radar line)
+        // ربط أزرار المحاذاة (Radar line) بشكل تفاعلي صحيح
         val alignButtons = mapOf(
             root.findViewById<Button>(R.id.rbAlignBottom) to "bottom",
             root.findViewById<Button>(R.id.rbAlignMid) to "mid",
@@ -219,7 +219,7 @@ class OverlayService : Service() {
             }
         }
 
-        // ربط أزرار الـ Bounding box الجديدة (بدلاً من RadioGroup القديم)
+        // ربط أزرار الـ Bounding box بشكل تفاعلي صحيح
         val statusButtons = mapOf(
             root.findViewById<Button>(R.id.rbStatusPrcs) to "prcs",
             root.findViewById<Button>(R.id.rbStatusFill) to "fill",
