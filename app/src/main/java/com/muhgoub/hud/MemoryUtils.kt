@@ -23,7 +23,6 @@ object MemoryUtils {
         return pid
     }
 
-    // دالة لاستخراج عنوان البداية لمكتبة libUE4.so من ذاكرة اللعبة ديناميكياً
     fun getModuleBase(pid: Int, moduleName: String = "libUE4.so"): Long {
         try {
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "cat /proc/$pid/maps"))
@@ -62,6 +61,46 @@ object MemoryUtils {
             e.printStackTrace()
         }
         return 0f
+    }
+
+    fun readLong(pid: Int, address: Long): Long {
+        try {
+            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=8 2>/dev/null"
+            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
+            val inputStream = process.inputStream
+            val buffer = ByteArray(8)
+            val bytesRead = inputStream.read(buffer)
+            process.waitFor()
+            if (bytesRead == 8) {
+                return ByteBuffer.wrap(buffer)
+                    .order(ByteOrder.LITTLE_ENDIAN)
+                    .long
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return 0L
+    }
+
+    fun readVector3(pid: Int, address: Long): Vector3 {
+        try {
+            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=12 2>/dev/null"
+            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
+            val inputStream = process.inputStream
+            val buffer = ByteArray(12)
+            val bytesRead = inputStream.read(buffer)
+            process.waitFor()
+            if (bytesRead == 12) {
+                val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN)
+                val x = byteBuffer.float
+                val y = byteBuffer.float
+                val z = byteBuffer.float
+                return Vector3(x, y, z)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return Vector3(0f, 0f, 0f)
     }
 
     fun readMatrix(pid: Int, address: Long): FloatArray {
