@@ -31,9 +31,17 @@ class ESPView(context: Context) : View(context) {
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
-    // إزحافات التحديث الجديد 4.6 (x64) المؤكدة
+    // الإزحافات الرئيسية للعبة
     private val GWORLD_OFFSET = 0xF624D40L
     private val VIEW_WORLD_OFFSET = 0xF5FBFD0L
+
+    // الإزحافات الداخلية المحدثة من القائمة الشاملة
+    private val OFFSET_PERSISTENT_LEVEL = 0x30L //[cite: 11]
+    private val OFFSET_ACTORS_ARRAY = 0x98L
+    private val OFFSET_ROOT_COMPONENT = 0x208L //[cite: 11]
+    private val OFFSET_RELATIVE_LOCATION = 0x1E4L
+    private val OFFSET_IS_DEAD = 0xE7CL
+    private val OFFSET_HEALTH = 0xE60L
 
     init {
         startLoop()
@@ -54,7 +62,7 @@ class ESPView(context: Context) : View(context) {
                         // 1. قراءة الـ ViewWorld Matrix
                         viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
 
-                        // 2. قراءة GWorld للتحديث 4.6
+                        // 2. قراءة GWorld
                         val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_OFFSET)
                         
                         var actorsCountFound = 0
@@ -62,22 +70,27 @@ class ESPView(context: Context) : View(context) {
                             playerList.clear()
                             
                             if (gWorldPtr != 0L) {
-                                val persistentLevel = MemoryUtils.readLong(currentPid, gWorldPtr + 0x30L)
+                                val persistentLevel = MemoryUtils.readLong(currentPid, gWorldPtr + OFFSET_PERSISTENT_LEVEL) //[cite: 11]
                                 if (persistentLevel != 0L) {
-                                    val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + 0x98L)
+                                    val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + OFFSET_ACTORS_ARRAY)
                                     if (actorsPtr != 0L) {
                                         for (i in 0 until 120) {
                                             val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L).toLong())
                                             if (actor != 0L) {
-                                                val rootComponent = MemoryUtils.readLong(currentPid, actor + 0x140L)
-                                                if (rootComponent != 0L) {
-                                                    val x = MemoryUtils.readFloat(currentPid, rootComponent + 0x1C0L)
-                                                    val y = MemoryUtils.readFloat(currentPid, rootComponent + 0x1C4L)
-                                                    val z = MemoryUtils.readFloat(currentPid, rootComponent + 0x1C8L)
-                                                    
-                                                    if (x != 0f || y != 0f) {
-                                                        playerList.add(MemoryUtils.Vector3(x, y, z))
-                                                        actorsCountFound++
+                                                // التحقق من أن الكائن حي (غير ميت) لتجنب رسم الأعداء الميتة
+                                                val isDead = MemoryUtils.readInt(currentPid, actor + OFFSET_IS_DEAD)
+                                                if (isDead == 0) {
+                                                    val rootComponent = MemoryUtils.readLong(currentPid, actor + OFFSET_ROOT_COMPONENT) //[cite: 11]
+                                                    if (rootComponent != 0L) {
+                                                        // قراءة الإحداثيات باستخدام RelativeLocation المعتمد (0x1E4)
+                                                        val x = MemoryUtils.readFloat(currentPid, rootComponent + OFFSET_RELATIVE_LOCATION)
+                                                        val y = MemoryUtils.readFloat(currentPid, rootComponent + OFFSET_RELATIVE_LOCATION + 4L)
+                                                        val z = MemoryUtils.readFloat(currentPid, rootComponent + OFFSET_RELATIVE_LOCATION + 8L)
+                                                        
+                                                        if (x != 0f || y != 0f) {
+                                                            playerList.add(MemoryUtils.Vector3(x, y, z))
+                                                            actorsCountFound++
+                                                        }
                                                     }
                                                 }
                                             }
