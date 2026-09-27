@@ -1,42 +1,65 @@
 package com.muhgoub.hud
 
 import java.io.BufferedReader
+import java.io.DataOutputStream
 import java.io.InputStreamReader
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 object MemoryUtils {
 
-    fun findProcessId(packageName: String): Int {
-        var pid = -1
+    private fun executeRootCmd(command: String): String {
+        var result = ""
         try {
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "pidof $packageName"))
+            val process = Runtime.getRuntime().exec("su")
+            val outputStream = DataOutputStream(process.outputStream)
             val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val line = reader.readLine()
-            if (!line.isNullOrEmpty()) {
-                pid = line.trim().toInt()
+
+            outputStream.writeBytes("$command\n")
+            outputStream.writeBytes("exit\n")
+            outputStream.flush()
+
+            val sb = StringBuilder()
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                sb.append(line).append("\n")
             }
             process.waitFor()
+            result = sb.toString().trim()
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        return pid
+        return result
+    }
+
+    fun findProcessId(packageName: String): Int {
+        val output = executeRootCmd("pidof $packageName")
+        if (output.isNotEmpty()) {
+            val firstLine = output.lines().firstOrNull()
+            if (!firstLine.isNullOrEmpty()) {
+                try {
+                    return firstLine.trim().toInt()
+                } catch (e: NumberFormatException) {
+                    // تجاهل الخطأ
+                }
+            }
+        }
+        return -1
     }
 
     fun getModuleBase(pid: Int, moduleName: String = "libUE4.so"): Long {
-        try {
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "cat /proc/$pid/maps"))
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            var line: String?
-            while (reader.readLine().also { line = it } != null) {
-                if (line!!.contains(moduleName) && line!!.contains("r-xp")) {
-                    val addrPart = line!!.substringBefore("-")
-                    return addrPart.toLong(16)
+        val output = executeRootCmd("cat /proc/$pid/maps")
+        if (output.isNotEmpty()) {
+            for (line in output.lines()) {
+                if (line.contains(moduleName) && line.contains("r-xp")) {
+                    val addrPart = line.substringBefore("-")
+                    try {
+                        return addrPart.toLong(16)
+                    } catch (e: Exception) {
+                        // تجاهل الخطأ
+                    }
                 }
             }
-            process.waitFor()
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
         return 0L
     }
@@ -44,83 +67,49 @@ object MemoryUtils {
     data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
     data class Vector3(val x: Float, val y: Float, val z: Float)
 
-    fun readFloat(pid: Int, address: Long): Float {
+    // قراءة بايتات الذاكرة باستخدام dd عبر الروت المضمون
+    private fun readBytes(pid: Int, address: Long, count: Int): ByteArray? {
         try {
-            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=4 2>/dev/null"
+            // استخدام أمر dd لنقل البيانات إلى ملف مؤقت أو قراءتها عبر الـ stream
+            // بما أن الـ dd يطبع على stdout، سنستخدم الطريقة الآمنة
+            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=$count 2>/dev/null"
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
             val inputStream = process.inputStream
-            val buffer = ByteArray(4)
+            val buffer = ByteArray(count)
             val bytesRead = inputStream.read(buffer)
             process.waitFor()
-            if (bytesRead == 4) {
-                return ByteBuffer.wrap(buffer)
-                    .order(ByteOrder.LITTLE_ENDIAN)
-                    .float
+            if (bytesRead == count) {
+                return buffer
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        return 0f
+        return null
+    }
+
+    fun readFloat(pid: Int, address: Long): Float {
+        val buffer = readBytes(pid, address, 4) ?: return 0f
+        return ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN).float
     }
 
     fun readLong(pid: Int, address: Long): Long {
-        try {
-            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=8 2>/dev/null"
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-            val inputStream = process.inputStream
-            val buffer = ByteArray(8)
-            val bytesRead = inputStream.read(buffer)
-            process.waitFor()
-            if (bytesRead == 8) {
-                return ByteBuffer.wrap(buffer)
-                    .order(ByteOrder.LITTLE_ENDIAN)
-                    .long
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return 0L
+        val buffer = readBytes(pid, address, 8) ?: return 0L
+        return ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN).long
     }
 
     fun readVector3(pid: Int, address: Long): Vector3 {
-        try {
-            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=12 2>/dev/null"
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-            val inputStream = process.inputStream
-            val buffer = ByteArray(12)
-            val bytesRead = inputStream.read(buffer)
-            process.waitFor()
-            if (bytesRead == 12) {
-                val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN)
-                val x = byteBuffer.float
-                val y = byteBuffer.float
-                val z = byteBuffer.float
-                return Vector3(x, y, z)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return Vector3(0f, 0f, 0f)
+        val buffer = readBytes(pid, address, 12) ?: return Vector3(0f, 0f, 0f)
+        val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN)
+        return Vector3(byteBuffer.float, byteBuffer.float, byteBuffer.float)
     }
 
     fun readMatrix(pid: Int, address: Long): FloatArray {
         val matrix = FloatArray(16)
-        try {
-            val byteCount = 16 * 4
-            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=$byteCount 2>/dev/null"
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-            val inputStream = process.inputStream
-            val buffer = ByteArray(byteCount)
-            val bytesRead = inputStream.read(buffer)
-            process.waitFor()
-            if (bytesRead == byteCount) {
-                val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN)
-                for (i in 0 until 16) {
-                    matrix[i] = byteBuffer.float
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        val byteCount = 16 * 4
+        val buffer = readBytes(pid, address, byteCount) ?: return matrix
+        val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN)
+        for (i in 0 until 16) {
+            matrix[i] = byteBuffer.float
         }
         return matrix
     }
