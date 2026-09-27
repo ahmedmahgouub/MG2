@@ -1,101 +1,132 @@
 package com.muhgoub.hud
 
-import java.io.File
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.view.View
+import kotlinx.coroutines.*
 
-object MemoryUtils {
+class ESPView(context: Context) : View(context) {
 
-    data class Vector3(val x: Float, val y: Float, val z: Float)
-    data class ScreenPoint(val x: Float, val y: Float, val isValid: Boolean)
+    private val textPaint = Paint().apply {
+        color = Color.GREEN
+        textSize = 26f
+        isAntiAlias = true
+        setShadowLayer(4f, 0f, 0f, Color.BLACK)
+    }
 
-    external fun attachProcess(pid: Int): Boolean
-    external fun readMemory(pid: Int, address: Long, buffer: ByteArray, size: Int): Boolean
-    external fun writeMemory(pid: Int, address: Long, buffer: ByteArray, size: Int): Boolean
+    private val enemyBoxPaint = Paint().apply {
+        color = Color.RED
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        isAntiAlias = true
+    }
 
-    init {
-        System.loadLibrary("muhgoub_memory")
-    }
+    private var scope: CoroutineScope? = null
+    private var isRunning = false
+    private var statusMessage = "MUHGOUB ESP - 4.6 READY"
+    private var currentPid = -1
+    
+    private var viewMatrix = FloatArray(16)
+    private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
-    fun findProcessId(packageName: String): Int {
-        val dir = File("/proc")
-        if (!dir.exists()) return -1
-        for (cmdlineFile in dir.listFiles() ?: arrayOf()) {
-            if (!cmdlineFile.isDirectory) continue
-            val pid = cmdlineFile.name.toIntOrNull() ?: continue
-            try {
-                val pkg = File(cmdlineFile, "cmdline").readText().trim { it <= ' ' }
-                if (pkg == packageName) return pid
-            } catch (e: Exception) {
-                // Ignore
-            }
-        }
-        return -1
-    }
+    // العناوين المحدثة بالكامل حسب آخر سكريبت وقائمة تم اعتمادها
+    private val GWORLD_BASE_OFFSET = 0xF3B85F8L
+    private val VIEW_WORLD_OFFSET = 0xE6D63E0L
+    private val OFFSET_ACTORS_ARRAY = 0xA0L
 
-    fun getModuleBase(pid: Int, moduleName: String): Long {
-        try {
-            val mapsFile = File("/proc/$pid/maps")
-            if (!mapsFile.exists()) return 0L
-            
-            val lines = mapsFile.readLines()
-            for (line in lines) {
-                if (line.contains(moduleName) && line.contains("r-xp")) {
-                    val addressPart = line.substringBefore("-")
-                    return addressPart.toLong(16)
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return 0L
-    }
+    init {
+        startLoop()
+    }
 
-    fun readLong(pid: Int, address: Long): Long {
-        val buffer = ByteArray(8)
-        if (readMemory(pid, address, buffer, 8)) {
-            var value = 0L
-            for (i in 0..7) {
-                value = value or ((buffer[i].toLong() and 0xFF) shl (8 * i))
-            }
-            return value
-        }
-        return 0L
-    }
+    private fun startLoop() {
+        if (isRunning) return
+        isRunning = true
+        scope = CoroutineScope(Dispatchers.Default + Job())
+        scope?.launch {
+            while (isRunning) {
+                currentPid = MemoryUtils.findProcessId("com.tencent.ig")
+                
+                if (currentPid != -1) {
+                    val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
+                    
+                    if (libBase != 0L) {
+                        // 1. قراءة الـ ViewWorld Matrix بالعنوان الجديد
+                        viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
 
-    fun readFloat(pid: Int, address: Long): Float {
-        val buffer = ByteArray(4)
-        if (readMemory(pid, address, buffer, 4)) {
-            val intBits = (buffer[0].toInt() and 0xFF) or
-                    ((buffer[1].toInt() and 0xFF) shl 8) or
-                    ((buffer[2].toInt() and 0xFF) shl 16) or
-                    ((buffer[3].toInt() and 0xFF) shl 24)
-            return Float.fromBits(intBits)
-        }
-        return 0f
-    }
+                        // 2. تطبيق معادلة GWorld الدقيقة: (Base - 0x20) + 0x30
+                        val step1 = MemoryUtils.readLong(currentPid, libBase + GWORLD_BASE_OFFSET)
+                        val step2 = if (step1 != 0L) MemoryUtils.readLong(currentPid, step1 - 0x20L) else 0L
+                        val gWorldPtr = if (step2 != 0L) step2 + 0x30L else 0L
+                        
+                        var count = 0
+                        synchronized(playerList) {
+                            playerList.clear()
+                            if (gWorldPtr != 0L) {
+                                val persistentLevel = MemoryUtils.readLong(currentPid, gWorldPtr + 0x30L)
+                                if (persistentLevel != 0L) {
+                                    // قراءة مصفوفة الكائنات بالإزحاف 0xA0
+                                    val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + OFFSET_ACTORS_ARRAY)
+                                    if (actorsPtr != 0L) {
+                                        for (i in 0 until 100) {
+                                            val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L))
+                                            if (actor != 0L) {
+                                                val rootComponent = MemoryUtils.readLong(currentPid, actor + 0x208L)
+                                                if (rootComponent != 0L) {
+                                                    val x = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E4L)
+                                                    val y = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E8L)
+                                                    val z = MemoryUtils.readFloat(currentPid, rootComponent + 0x1ECL)
+                                                    
+                                                    if (x != 0f || y != 0f) {
+                                                        playerList.add(MemoryUtils.Vector3(x, y, z))
+                                                        count++
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        statusMessage = "PID: $currentPid | GW: ${gWorldPtr != 0L} | Players: $count"
+                    } else {
+                        statusMessage = "PID: $currentPid | WAITING FOR LIB..."
+                    }
+                } else {
+                    statusMessage = "WAITING FOR PUBG..."
+                }
 
-    fun readMatrix(pid: Int, address: Long): FloatArray {
-        val buffer = ByteArray(64)
-        val matrix = FloatArray(16)
-        if (readMemory(pid, address, buffer, 64)) {
-            for (i in 0..15) {
-                val intBits = (buffer[i * 4].toInt() and 0xFF) or
-                        ((buffer[i * 4 + 1].toInt() and 0xFF) shl 8) or
-                        ((buffer[i * 4 + 2].toInt() and 0xFF) shl 16) or
-                        ((buffer[i * 4 + 3].toInt() and 0xFF) shl 24)
-                matrix[i] = Float.fromBits(intBits)
-            }
-        }
-        return matrix
-    }
+                withContext(Dispatchers.Main) {
+                    invalidate()
+                }
+                delay(25L)
+            }
+        }
+    }
 
-    fun worldToScreen(worldLocation: Vector3, matrix: FloatArray, width: Int, height: Int): ScreenPoint {
-        val transformedZ = matrix[3] * worldLocation.x + matrix[7] * worldLocation.y + matrix[11] * worldLocation.z + matrix[15]
-        if (transformedZ < 0.01f) return ScreenPoint(0f, 0f, false)
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        canvas.drawText(statusMessage, 30f, 120f, textPaint)
 
-        val inv = 1.0f / transformedZ
-        val screenX = (width / 2.0f) + (matrix[0] * worldLocation.x + matrix[4] * worldLocation.y + matrix[8] * worldLocation.z + matrix[12]) * inv * (width / 2.0f)
-        val screenY = (height / 2.0f) - (matrix[1] * worldLocation.x + matrix[5] * worldLocation.y + matrix[9] * worldLocation.z + matrix[13]) * inv * (height / 2.0f)
+        synchronized(playerList) {
+            for (player in playerList) {
+                val pt = MemoryUtils.worldToScreen(player, viewMatrix, width, height)
+                if (pt.isValid) {
+                    val l = pt.x - 40f
+                    val t = pt.y - 100f
+                    val r = pt.x + 40f
+                    val b = pt.y + 100f
+                    canvas.drawRect(l, t, r, b, enemyBoxPaint)
+                    canvas.drawText("Player", l, t - 8f, textPaint)
+                }
+            }
+        }
+    }
 
-        return ScreenPoint(screenX, screenY, true)
-    }
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        isRunning = false
+        scope?.cancel()
+    }
 }
