@@ -11,7 +11,7 @@ class ESPView(context: Context) : View(context) {
 
     private val textPaint = Paint().apply {
         color = Color.GREEN
-        textSize = 28f
+        textSize = 26f
         isAntiAlias = true
         setShadowLayer(4f, 0f, 0f, Color.BLACK)
     }
@@ -31,7 +31,7 @@ class ESPView(context: Context) : View(context) {
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
-    // إزحافات النسخة 64-bit المستخرجة من المصدر
+    // إزحافات النسخة 64-bit
     private val GWORLD_OFFSET = 0xF624D40L
     private val VIEW_WORLD_OFFSET = 0xF5FBFD0L
 
@@ -51,14 +51,13 @@ class ESPView(context: Context) : View(context) {
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        statusMessage = "PID: $currentPid | LIVE (x64)"
-                        
-                        // 1. قراءة الـ ViewMatrix باستخدام أوفسيت x64 الحقيقي
+                        // 1. قراءة الـ ViewMatrix
                         viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
 
-                        // 2. قراءة مؤشر العالم GWorld وجلب الكائنات بطريقة آمنة
+                        // 2. قراءة GWorld وفحص الـ Pointers لتشخيص البيانات
                         val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_OFFSET)
                         
+                        var foundCount = 0
                         synchronized(playerList) {
                             playerList.clear()
                             
@@ -68,8 +67,7 @@ class ESPView(context: Context) : View(context) {
                                     val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + 0x98L)
                                     
                                     if (actorsPtr != 0L) {
-                                        // فحص عدد محدد من الكائنات لتجنب أي مشاكل في القراءة أو الدوال
-                                        for (i in 0 until 100) {
+                                        for (i in 0 until 50) {
                                             val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L).toLong())
                                             if (actor != 0L) {
                                                 val rootComponent = MemoryUtils.readLong(currentPid, actor + 0x140L)
@@ -80,6 +78,7 @@ class ESPView(context: Context) : View(context) {
                                                     
                                                     if (x != 0f || y != 0f) {
                                                         playerList.add(MemoryUtils.Vector3(x, y, z))
+                                                        foundCount++
                                                     }
                                                 }
                                             }
@@ -88,6 +87,10 @@ class ESPView(context: Context) : View(context) {
                                 }
                             }
                         }
+                        
+                        // تحديث رسالة الحالة لعرض نتيجة الفحص وقيمة الـ GWorld مباشرة على الشاشة
+                        statusMessage = "PID: $currentPid | GW: ${gWorldPtr != 0L} | Actors: $foundCount"
+                        
                     } else {
                         statusMessage = "PID: $currentPid | WAITING FOR LIB..."
                     }
@@ -106,10 +109,10 @@ class ESPView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // رسم الحالة وعنوان الأساس أعلى الشاشة
-        canvas.drawText(statusMessage, 50f, 150f, textPaint)
+        // رسم الحالة ومعلومات التشخيص أعلى الشاشة
+        canvas.drawText(statusMessage, 30f, 120f, textPaint)
 
-        // رسم اللاعبين الحقيقيين المحولين من الذاكرة عبر الـ WorldToScreen
+        // رسم المربعات للأعداء عند توفر إحداثيات صالحة
         synchronized(playerList) {
             for (player in playerList) {
                 val pt = MemoryUtils.worldToScreen(player, viewMatrix, width, height)
