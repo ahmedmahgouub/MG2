@@ -26,6 +26,9 @@ class ESPView @JvmOverloads constructor(
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
     private var statusMessage = "WAITING FOR PUBG..."
+    
+    // متغيرات لتثبيت وتخزين المؤشرات مؤقتاً (Caching) لضمان الاستقرار وعدم الرفرفة
+    private var cachedGWorld: Long = 0L
 
     private val textPaint = Paint().apply {
         color = android.graphics.Color.GREEN
@@ -38,15 +41,6 @@ class ESPView @JvmOverloads constructor(
         style = Paint.Style.STROKE
         strokeWidth = 3f
         isAntiAlias = true
-    }
-
-    companion object {
-        // الأوفسيتات الصحيحة والمستخرجة بدقة من التيرمينال
-        private const val VIEW_WORLD_OFFSET = 0x4126140L      // ProjectionMatrix
-        private const val GWORLD_BASE_OFFSET = 0x40D0C7FL      // UWorld
-        private const val OFFSET_PERSISTENT_LEVEL = 0x422C7C8L // PersistentLevel
-        private const val OFFSET_ACTORS_ARRAY = 0x98L
-        private const val OFFSET_ACTORS_COUNT = 0xA0L
     }
 
     override fun onAttachedToWindow() {
@@ -78,21 +72,27 @@ class ESPView @JvmOverloads constructor(
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        val tempMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
+                        // قراءة مصفوفة الإسقاط باستخدام الأوفسيت المستخرج من التيرماكس
+                        val tempMatrix = MemoryUtils.readMatrix(currentPid, libBase + MemoryUtils.OFFSET_PROJECTION_MATRIX)
                         if (tempMatrix[0] != 0f) {
                             viewMatrix = tempMatrix
                         }
                         
-                        val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_BASE_OFFSET)
+                        // قراءة UWorld مع التحقق من صحته وتثبيته لمنع تذبذب الـ true/false
+                        val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + MemoryUtils.OFFSET_UWORLD)
+                        if (gWorldPtr != 0L && gWorldPtr > 0x10000000L) {
+                            cachedGWorld = gWorldPtr
+                        }
                         
                         var count = 0
                         val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
 
-                        if (gWorldPtr != 0L && gWorldPtr > 0x10000000L) {
-                            val persistentLevel = MemoryUtils.readLong(currentPid, gWorldPtr + OFFSET_PERSISTENT_LEVEL)
+                        if (cachedGWorld != 0L && cachedGWorld > 0x10000000L) {
+                            // قراءة PersistentLevel باستخدام الأوفسيت المستخرج من التيرماكس
+                            val persistentLevel = MemoryUtils.readLong(currentPid, cachedGWorld + MemoryUtils.OFFSET_PERSISTENT_LEVEL)
                             if (persistentLevel != 0L && persistentLevel > 0x10000000L) {
-                                val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + OFFSET_ACTORS_ARRAY)
-                                val actorsCount = MemoryUtils.readLong(currentPid, persistentLevel + OFFSET_ACTORS_COUNT).toInt()
+                                val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + 0x98L)
+                                val actorsCount = MemoryUtils.readLong(currentPid, persistentLevel + 0xA0L).toInt()
                                 
                                 if (actorsPtr != 0L && actorsCount in 1..10000) {
                                     val maxCount = minOf(actorsCount, 800)
@@ -121,7 +121,7 @@ class ESPView @JvmOverloads constructor(
                             playerList.addAll(tempPlayers)
                         }
                         
-                        val isGWValid = (gWorldPtr != 0L && gWorldPtr > 0x10000000L)
+                        val isGWValid = (cachedGWorld != 0L && cachedGWorld > 0x10000000L)
                         statusMessage = "PID: $currentPid | GW: $isGWValid | Players: $count"
                     } else {
                         statusMessage = "PID: $currentPid | WAITING FOR LIB..."
@@ -142,6 +142,7 @@ class ESPView @JvmOverloads constructor(
         isRunning = false
         scope?.cancel()
         scope = null
+        cachedGWorld = 0L
     }
 
     override fun onDraw(canvas: Canvas) {
