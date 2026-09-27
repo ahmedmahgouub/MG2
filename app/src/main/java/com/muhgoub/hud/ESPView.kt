@@ -56,15 +56,15 @@ class ESPView(context: Context) : View(context) {
                         // 1. قراءة الـ ViewMatrix باستخدام أوفسيت x64 الحقيقي
                         viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
 
-                        // 2. قراءة مؤشر العالم GWorld للوصول للاعبين
+                        // 2. قراءة مؤشر العالم GWorld
                         val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_OFFSET)
                         
                         synchronized(playerList) {
                             playerList.clear()
                             
                             if (gWorldPtr != 0L) {
-                                // هنا سيتم تطبيق حلقة قراءة الـ Actors والـ Entity List بالخطوات القادمة
-                                // حالياً جاري تجهيز مؤشرات الذاكرة بدقة عالية
+                                // هيكل قراءة قائمة الكائنات (Entity List)
+                                // يتم جلب الإحداثيات وإضافتها للـ playerList هنا تدريجياً
                             }
                         }
                     } else {
