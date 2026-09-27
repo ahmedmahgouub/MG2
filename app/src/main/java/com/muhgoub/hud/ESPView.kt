@@ -1,4 +1,52 @@
-private fun startLoop() {
+package com.muhgoub.hud
+
+import android.content.Context
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.util.AttributeSet
+import android.view.View
+import kotlinx.coroutines.*
+
+class ESPView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : View(context, attrs, defStyleAttr) {
+
+    private var isRunning = false
+    private var scope: CoroutineScope? = null
+    private var currentPid = -1
+    private val supportedPackages = arrayOf("com.tencent.ig", "com.pubg.imimet")
+    
+    private var viewMatrix = FloatArray(16)
+    private val playerList = mutableListOf<MemoryUtils.Vector3>()
+    private var statusMessage = "WAITING FOR PUBG..."
+
+    private val textPaint = Paint().apply {
+        color = android.graphics.Color.GREEN
+        textSize = 36f
+        isAntiAlias = true
+    }
+
+    companion object {
+        private const val VIEW_WORLD_OFFSET = 0x0L // يتم تعديل الأوفست حسب الإصدار
+        private const val GWORLD_BASE_OFFSET = 0x0L
+        private const val OFFSET_PERSISTENT_LEVEL = 0x30L
+        private const val OFFSET_ACTORS_ARRAY = 0x98L
+        private const val OFFSET_ACTORS_COUNT = 0xA0L
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        startLoop()
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        stopLoop()
+    }
+
+    private fun startLoop() {
         if (isRunning) return
         isRunning = true
         scope = CoroutineScope(Dispatchers.Default + Job())
@@ -40,9 +88,9 @@ private fun startLoop() {
                                         if (actor != 0L && actor > 0x10000000L) {
                                             val rootComponent = MemoryUtils.readLong(currentPid, actor + 0x208L)
                                             if (rootComponent != 0L && rootComponent > 0x10000000L) {
-                                                val x = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E4L)
-                                                val y = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E8L)
-                                                val z = MemoryUtils.readFloat(currentPid, rootComponent + 0x1ECL)
+                                               val x = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E4L)
+                                               val y = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E8L)
+                                               val z = MemoryUtils.readFloat(currentPid, rootComponent + 0x1ECL)
                                                 
                                                 if (x != 0f && y != 0f) {
                                                     tempPlayers.add(MemoryUtils.Vector3(x, y, z))
@@ -76,3 +124,15 @@ private fun startLoop() {
             }
         }
     }
+
+    private fun stopLoop() {
+        isRunning = false
+        scope?.cancel()
+        scope = null
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        canvas.drawText(statusMessage, 50f, 100f, textPaint)
+    }
+}
