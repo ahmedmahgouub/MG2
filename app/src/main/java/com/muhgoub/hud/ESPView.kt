@@ -31,7 +31,7 @@ class ESPView(context: Context) : View(context) {
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
-    // العناوين المحدثة للنسخة 4.6.1
+    // العناوين المحدثة للنسخة 4.6.1 (GWorld مباشر)
     private val GWORLD_BASE_OFFSET = 0xF624D40L
     private val VIEW_WORLD_OFFSET = 0xF5FBFD0L
     private val OFFSET_ACTORS_ARRAY = 0xA0L
@@ -56,10 +56,8 @@ class ESPView(context: Context) : View(context) {
                         // 1. قراءة الـ ViewWorld Matrix بالإحداثيات الجديدة
                         viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
 
-                        // 2. تطبيق معادلة GWorld بالبوينتر الجديد
-                        val step1 = MemoryUtils.readLong(currentPid, libBase + GWORLD_BASE_OFFSET)
-                        val step2 = if (step1 != 0L) MemoryUtils.readLong(currentPid, step1 - 0x20L) else 0L
-                        val gWorldPtr = if (step2 != 0L) step2 + 0x30L else 0L
+                        // 2. قراءة الـ GWorld مباشرة بالأوفيس الجديد بدون معادلة قديمة
+                        val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_BASE_OFFSET)
                         
                         var count = 0
                         synchronized(playerList) {
