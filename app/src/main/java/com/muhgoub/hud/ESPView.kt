@@ -16,7 +16,12 @@ class ESPView @JvmOverloads constructor(
     private var isRunning = false
     private var scope: CoroutineScope? = null
     private var currentPid = -1
-    private val supportedPackages = arrayOf("com.tencent.ig", "com.pubg.imimet")
+    private val supportedPackages = arrayOf(
+        "com.tencent.ig",
+        "com.vng.pubgmobile",
+        "com.pubg.krmobile",
+        "com.rekoo.pubg"
+    )
     
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
@@ -28,10 +33,18 @@ class ESPView @JvmOverloads constructor(
         isAntiAlias = true
     }
 
+    private val enemyBoxPaint = Paint().apply {
+        color = android.graphics.Color.RED
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        isAntiAlias = true
+    }
+
     companion object {
-        private const val VIEW_WORLD_OFFSET = 0x0L // يتم تعديل الأوفست حسب الإصدار
-        private const val GWORLD_BASE_OFFSET = 0x0L
-        private const val OFFSET_PERSISTENT_LEVEL = 0x30L
+        // الأوفسيتات الصحيحة والمستخرجة بدقة من التيرمينال
+        private const val VIEW_WORLD_OFFSET = 0x4126140L      // ProjectionMatrix
+        private const val GWORLD_BASE_OFFSET = 0x40D0C7FL      // UWorld
+        private const val OFFSET_PERSISTENT_LEVEL = 0x422C7C8L // PersistentLevel
         private const val OFFSET_ACTORS_ARRAY = 0x98L
         private const val OFFSET_ACTORS_COUNT = 0xA0L
     }
@@ -88,9 +101,9 @@ class ESPView @JvmOverloads constructor(
                                         if (actor != 0L && actor > 0x10000000L) {
                                             val rootComponent = MemoryUtils.readLong(currentPid, actor + 0x208L)
                                             if (rootComponent != 0L && rootComponent > 0x10000000L) {
-                                               val x = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E4L)
-                                               val y = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E8L)
-                                               val z = MemoryUtils.readFloat(currentPid, rootComponent + 0x1ECL)
+                                                val x = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E4L)
+                                                val y = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E8L)
+                                                val z = MemoryUtils.readFloat(currentPid, rootComponent + 0x1ECL)
                                                 
                                                 if (x != 0f && y != 0f) {
                                                     tempPlayers.add(MemoryUtils.Vector3(x, y, z))
@@ -133,6 +146,20 @@ class ESPView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        canvas.drawText(statusMessage, 50f, 100f, textPaint)
+        canvas.drawText(statusMessage, 30f, 120f, textPaint)
+
+        synchronized(playerList) {
+            for (player in playerList) {
+                val pt = MemoryUtils.worldToScreen(player, viewMatrix, width, height)
+                if (pt.isValid) {
+                    val l = pt.x - 40f
+                    val t = pt.y - 100f
+                    val r = pt.x + 40f
+                    val b = pt.y + 100f
+                    canvas.drawRect(l, t, r, b, enemyBoxPaint)
+                    canvas.drawText("Player", l, t - 8f, textPaint)
+                }
+            }
+        }
     }
 }
