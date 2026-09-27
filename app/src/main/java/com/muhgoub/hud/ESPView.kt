@@ -31,9 +31,9 @@ class ESPView(context: Context) : View(context) {
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
-    // الأوفيسات الجديدة والحديثة للتحديث الحالي
-    private val GWORLD_BASE_OFFSET = 0xF624D40L
-    private val VIEW_WORLD_OFFSET = 0xF5FBFD0L
+    // تم تحديث الأوفسيتات بالقيم الحقيقية المستخرجة من libUE4.so
+    private val GWORLD_BASE_OFFSET = MemoryUtils.OFFSET_UWORLD
+    private val VIEW_WORLD_OFFSET = MemoryUtils.OFFSET_PROJECTION_MATRIX
     private val OFFSET_PERSISTENT_LEVEL = 0x30L
     private val OFFSET_ACTORS_ARRAY = 0xA0L
     private val OFFSET_ACTORS_COUNT = 0xA8L
@@ -68,10 +68,10 @@ class ESPView(context: Context) : View(context) {
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        // قراءة Matrix بدقة
+                        // قراءة Matrix باستخدام الأوفسيت الجديد
                         viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
                         
-                        // قراءة GWorld باستخدام الأوفيس الجديد
+                        // قراءة GWorld باستخدام الأوفسيت الجديد
                         val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_BASE_OFFSET)
                         
                         var count = 0
