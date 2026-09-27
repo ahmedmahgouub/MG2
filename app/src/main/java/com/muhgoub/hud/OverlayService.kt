@@ -42,16 +42,18 @@ class OverlayService : Service() {
 
     private lateinit var windowManager: WindowManager
     private lateinit var prefs: PrefsManager
-    private val mainHandler = Handler(Looper.getMainLooper())
+    private val mainHandler = Handler(Looper.`object`?.let { it } ?: Looper.getMainLooper())
 
     private var bubbleView: View? = null
     private var panelView: View? = null
-    private var espView: ESPView? = null // طبقة الرسم الجديدة الخاصة بالكاشف
+    private var espView: ESPView? = null
     
     private var bubbleParams: WindowManager.LayoutParams? = null
     private var panelParams: WindowManager.LayoutParams? = null
 
     private val toggleButtons = arrayOfNulls<Button>(12)
+    private var isRunning = true
+    private val loopHandler = Handler(Looper.getMainLooper())
 
     override fun onCreate() {
         super.onCreate()
@@ -62,10 +64,13 @@ class OverlayService : Service() {
 
         addBubbleView()
         addPanelView()
-        addEspView() // إضافة طبقة الكاشف للشاشة
+        addEspView()
 
         applyCoreAlign(prefs.getCoreAlign())
         setPanelVisible(prefs.isOverlayExpanded())
+
+        // بدء حلقة التحديث والقراءة المستمرة للذاكرة والأوفسيتات
+        startMemoryLoop()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -76,9 +81,10 @@ class OverlayService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        isRunning = false
         bubbleView?.let { runCatching { windowManager.removeView(it) } }
         panelView?.let { runCatching { windowManager.removeView(it) } }
-        espView?.let { runCatching { windowManager.removeView(it) } } // إزالة طبقة الكاشف عند الإيقاف
+        espView?.let { runCatching { windowManager.removeView(it) } }
         super.onDestroy()
     }
 
@@ -128,7 +134,6 @@ class OverlayService : Service() {
         bubbleParams = params
     }
 
-    // دالة إنشاء وإضافة طبقة الكاشف (ESPView) الشفافة فوق اللعبة
     private fun addEspView() {
         espView = ESPView(this)
         val params = WindowManager.LayoutParams(
@@ -150,6 +155,38 @@ class OverlayService : Service() {
             windowManager.addView(espView, params)
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    // حلقة القراءة المستمرة وتحديث بيانات الكاشف والـ GW
+    private fun startMemoryLoop() {
+        thread {
+            while (isRunning) {
+                try {
+                    val pid = MemoryUtils.findProcessId("com.tencent.ig")
+                    if (pid != -1) {
+                        val baseAddr = MemoryUtils.getModuleBase(pid, "libUE4.so")
+                        if (baseAddr != 0L) {
+                            val uWorldAddr = baseAddr + MemoryUtils.OFFSET_UWORLD
+                            val uWorld = MemoryUtils.readLong(pid, uWorldAddr)
+                            
+                            val isGwTrue = uWorld != 0L
+                            
+                            // تحديث حالة العرض والبيانات في ESPView
+                            mainHandler.post {
+                                espView?.updateGameData(pid, isGwTrue, 0) // سيتم تمرير عدد اللاعبين الفعلي لاحقاً
+                            }
+                        } else {
+                            mainHandler.post {
+                                espView?.updateGameData(pid, false, 0)
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                Thread.sleep(100) // التحديث كل 100 ملي ثانية لمنع استهلاك المعالج
+            }
         }
     }
 
@@ -356,7 +393,7 @@ class OverlayService : Service() {
     private fun showBandwidthUsage() {
         val rx = TrafficStats.getTotalRxBytes() / (1024 * 1024)
         val tx = TrafficStats.getTotalTxBytes() / (1024 * 1024)
-        toast("تحميل: ${rx}MB | رفع: ${tx}MB")
+        toast("تحميل: ${rx}MB \vert{} رفع: ${tx}MB")
     }
 
     private fun showPacketStats() {
