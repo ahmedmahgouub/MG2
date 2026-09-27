@@ -31,10 +31,9 @@ class ESPView(context: Context) : View(context) {
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
-    // الأوفيسات المباشرة والصحيحة للنسخة 4.6.1
+    // العناوين المحدثة للنسخة 4.6.1 (GWorld مباشر)
     private val GWORLD_BASE_OFFSET = 0xF624D40L
     private val VIEW_WORLD_OFFSET = 0xF5FBFD0L
-    private val OFFSET_PERSISTENT_LEVEL = 0x30L
     private val OFFSET_ACTORS_ARRAY = 0xA0L
     private val OFFSET_ACTORS_COUNT = 0xA8L
 
@@ -54,23 +53,23 @@ class ESPView(context: Context) : View(context) {
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        // 1. قراءة الـ ViewWorld Matrix
+                        // 1. قراءة الـ ViewWorld Matrix بالإحداثيات الجديدة
                         viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
 
-                        // 2. قراءة الـ GWorld مباشرة بالأوفيس الذي أعطى GW: true
+                        // 2. قراءة الـ GWorld مباشرة بالأوفيس الجديد بدون معادلة قديمة
                         val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_BASE_OFFSET)
                         
                         var count = 0
                         synchronized(playerList) {
                             playerList.clear()
                             if (gWorldPtr != 0L) {
-                                val persistentLevel = MemoryUtils.readLong(currentPid, gWorldPtr + OFFSET_PERSISTENT_LEVEL)
+                                val persistentLevel = MemoryUtils.readLong(currentPid, gWorldPtr + 0x30L)
                                 if (persistentLevel != 0L) {
                                     val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + OFFSET_ACTORS_ARRAY)
                                     val actorsCount = MemoryUtils.readLong(currentPid, persistentLevel + OFFSET_ACTORS_COUNT).toInt()
                                     
-                                    if (actorsPtr != 0L && actorsCount > 0 && actorsCount < 60000) {
-                                        val maxCount = minOf(actorsCount, 800)
+                                    if (actorsPtr != 0L && actorsCount > 0 && actorsCount < 20000) {
+                                        val maxCount = minOf(actorsCount, 500)
                                         for (i in 0 until maxCount) {
                                             val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L))
                                             if (actor != 0L) {
