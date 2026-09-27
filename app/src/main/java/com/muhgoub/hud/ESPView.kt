@@ -72,7 +72,7 @@ class ESPView @JvmOverloads constructor(
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        // قراءة مصفوفة الإسقاط باستخدام الأوفسيت المستخرج من التيرماكس
+                        // قراءة مصفوفة الإسقاط باستخدام الأوفسيت المستخرج
                         val tempMatrix = MemoryUtils.readMatrix(currentPid, libBase + MemoryUtils.OFFSET_PROJECTION_MATRIX)
                         if (tempMatrix[0] != 0f) {
                             viewMatrix = tempMatrix
@@ -88,14 +88,15 @@ class ESPView @JvmOverloads constructor(
                         val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
 
                         if (cachedGWorld != 0L && cachedGWorld > 0x10000000L) {
-                            // قراءة PersistentLevel باستخدام الأوفسيت المستخرج من التيرماكس
+                            // قراءة PersistentLevel باستخدام الأوفسيت المستخرج
                             val persistentLevel = MemoryUtils.readLong(currentPid, cachedGWorld + MemoryUtils.OFFSET_PERSISTENT_LEVEL)
                             if (persistentLevel != 0L && persistentLevel > 0x10000000L) {
                                 val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + 0x98L)
                                 val actorsCount = MemoryUtils.readLong(currentPid, persistentLevel + 0xA0L).toInt()
                                 
-                                if (actorsPtr != 0L && actorsCount in 1..10000) {
-                                    val maxCount = minOf(actorsCount, 800)
+                                // التحقق من أن عدد الـ Actors في نطاق منطقي وصحيح لضمان الاستقرار
+                                if (actorsPtr != 0L && actorsCount in 1..2000) {
+                                    val maxCount = minOf(actorsCount, 500)
                                     for (i in 0 until maxCount) {
                                         val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L))
                                         if (actor != 0L && actor > 0x10000000L) {
