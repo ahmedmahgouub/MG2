@@ -1,168 +1,174 @@
 package com.muhgoub.hud
 
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import java.io.File
+import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 object MemoryUtils {
 
-    // متغير التحكم في وضع الكيرنال (True = وضع الكيرنال السريع / False = الوضع العادي)
-    var isKernelModeEnabled: Boolean = false
+    data class Vector3(val x: Float, val y: Float, val z: Float)
+    data class ScreenPoint(val x: Float, val y: Float, val isValid: Boolean)
 
-    // الأوفسيتات الحقيقية والجديدة المستخرجة من التيرمينال حصرياً
-    const val OFFSET_UWORLD: Long = 0x40D0C7F
-    const val OFFSET_PROJECTION_MATRIX: Long = 0x4126140
-    const val OFFSET_PERSISTENT_LEVEL: Long = 0x422C7C8
-    const val OFFSET_PLAYER_CONTROLLER: Long = 0x3FC17C0
-    const val OFFSET_PAWN_VELOCITY: Long = 0x40DDAD3
-    const val OFFSET_PLAYER_INDEX: Long = 0x412FEA8
-
+    // البحث عن رقم العملية (PID) للعبة
     fun findProcessId(packageName: String): Int {
         var pid = -1
         try {
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "pidof $packageName"))
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val line = reader.readLine()
-            if (!line.isNullOrEmpty()) {
-                pid = line.trim().toInt()
+            val file = File("/proc")
+            val files = file.listFiles() ?: return -1
+            for (fileItem in files) {
+                if (fileItem.isDirectory) {
+                    val cmdlineFile = File(fileItem, "cmdline")
+                    if (cmdlineFile.exists() && cmdlineFile.canRead()) {
+                        val cmdline = cmdlineFile.readText().trim { it <= ' ' }
+                        if (cmdline == packageName) {
+                            pid = fileItem.name.toInt()
+                            break
+                        }
+                    }
+                }
             }
-            process.waitFor()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) {}
         return pid
     }
 
-    fun getModuleBase(pid: Int, moduleName: String = "libUE4.so"): Long {
+    // جلب Base Address لمكتبة libUE4.so
+    fun getModuleBase(pid: Int, moduleName: String): Long {
         try {
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "cat /proc/$pid/maps"))
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            var line: String?
-            while (reader.readLine().also { line = it } != null) {
-                if (line!!.contains(moduleName) && line!!.contains("r-xp")) {
-                    val addrPart = line!!.substringBefore("-")
-                    return addrPart.toLong(16)
+            val mapsFile = File("/proc/$pid/maps")
+            if (mapsFile.exists()) {
+                mapsFile.forEachLine { line ->
+                    if (line.contains(moduleName) && line.contains("r-xp")) {
+                        val addressPart = line.substringBefore("-")
+                        return addressPart.toLong(16)
+                    }
                 }
             }
-            process.waitFor()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) {}
         return 0L
     }
 
-    data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
-    data class Vector3(val x: Float, val y: Float, val z: Float)
-
-    // ================= قراءة الفلوت مع الدعم المزدوج (Kernel / Normal) =================
-    fun readFloat(pid: Int, address: Long): Float {
-        if (isKernelModeEnabled) {
-            return KernelMemory.readFloat(pid, address)
-        }
+    // قراءة قيمة Integer من الذاكرة
+    fun readInt(pid: Int, address: Long): Int {
         try {
-            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=4 2>/dev/null"
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-            val inputStream = process.inputStream
+            val memFile = RandomAccessFile("/proc/$pid/mem", "r")
+            memFile.seek(address)
             val buffer = ByteArray(4)
-            val bytesRead = inputStream.read(buffer)
-            process.waitFor()
-            if (bytesRead == 4) {
-                return ByteBuffer.wrap(buffer)
-                    .order(ByteOrder.LITTLE_ENDIAN)
-                    .float
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+            memFile.readFully(buffer)
+            memFile.close()
+            return ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN).int
+        } catch (e: Exception) {}
+        return 0
+    }
+
+    // قراءة قيمة Float من الذاكرة
+    fun readFloat(pid: Int, address: Long): Float {
+        try {
+            val memFile = RandomAccessFile("/proc/$pid/mem", "r")
+            memFile.seek(address)
+            val buffer = ByteArray(4)
+            memFile.readFully(buffer)
+            memFile.close()
+            return ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN).float
+        } catch (e: Exception) {}
         return 0f
     }
 
-    // ================= قراءة اللونج مع الدعم المزدوج =================
+    // قراءة قيمة Long من الذاكرة
     fun readLong(pid: Int, address: Long): Long {
-        if (isKernelModeEnabled) {
-            return KernelMemory.readLong(pid, address)
-        }
         try {
-            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=8 2>/dev/null"
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-            val inputStream = process.inputStream
+            val memFile = RandomAccessFile("/proc/$pid/mem", "r")
+            memFile.seek(address)
             val buffer = ByteArray(8)
-            val bytesRead = inputStream.read(buffer)
-            process.waitFor()
-            if (bytesRead == 8) {
-                return ByteBuffer.wrap(buffer)
-                    .order(ByteOrder.LITTLE_ENDIAN)
-                    .long
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+            memFile.readFully(buffer)
+            memFile.close()
+            return ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN).long
+        } catch (e: Exception) {}
         return 0L
     }
 
-    // ================= قراءة المتجهات مع الدعم المزدوج =================
-    fun readVector3(pid: Int, address: Long): Vector3 {
-        if (isKernelModeEnabled) {
-            return KernelMemory.readVector3(pid, address)
-        }
-        try {
-            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=12 2>/dev/null"
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-            val inputStream = process.inputStream
-            val buffer = ByteArray(12)
-            val bytesRead = inputStream.read(buffer)
-            process.waitFor()
-            if (bytesRead == 12) {
-                val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN)
-                val x = byteBuffer.float
-                val y = byteBuffer.float
-                val z = byteBuffer.float
-                return Vector3(x, y, z)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return Vector3(0f, 0f, 0f)
-    }
-
-    // ================= قراءة المصفوفة مع الدعم المزدوج =================
+    // قراءة مصفوفة الإسقاط (Matrix)
     fun readMatrix(pid: Int, address: Long): FloatArray {
         val matrix = FloatArray(16)
-        if (isKernelModeEnabled) {
-            return KernelMemory.readMatrix(pid, address)
-        }
         try {
-            val byteCount = 16 * 4
-            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=$byteCount 2>/dev/null"
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-            val inputStream = process.inputStream
-            val buffer = ByteArray(byteCount)
-            val bytesRead = inputStream.read(buffer)
-            process.waitFor()
-            if (bytesRead == byteCount) {
-                val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN)
-                for (i in 0 until 16) {
-                    matrix[i] = byteBuffer.float
-                }
+            val memFile = RandomAccessFile("/proc/$pid/mem", "r")
+            memFile.seek(address)
+            val buffer = ByteArray(64)
+            memFile.readFully(buffer)
+            memFile.close()
+            val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN)
+            for (i in 0 until 16) {
+                matrix[i] = byteBuffer.float
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) {}
         return matrix
     }
 
-    fun worldToScreen(worldLocation: Vector3, matrix: FloatArray, screenWidth: Int, screenHeight: Int): Point2D {
-        val w = matrix[3] * worldLocation.x + matrix[7] * worldLocation.y + matrix[11] * worldLocation.z + matrix[15]
-
-        if (w < 0.01f) {
-            return Point2D(0f, 0f, false)
+    // تحويل نص البصمة إلى بايتات وMask للبحث الديناميكي
+    private fun parsePattern(patternStr: String): Pair<ByteArray, String> {
+        val tokens = patternStr.trim().split(Regex("\\s+"))
+        val bytes = ByteArray(tokens.size)
+        val mask = StringBuilder()
+        for (i in tokens.indices) {
+            if (tokens[i] == "?" || tokens[i] == "??") {
+                bytes[i] = 0
+                mask.append("?")
+            } else {
+                bytes[i] = tokens[i].toInt(16).toByte()
+                mask.append("x")
+            }
         }
+        return Pair(bytes, mask.toString())
+    }
 
-        val invW = 1.0f / w
-        val x = screenWidth / 2 + (matrix[0] * worldLocation.x + matrix[4] * worldLocation.y + matrix[8] * worldLocation.z + matrix[12]) * invW * (screenWidth / 2)
-        val y = screenHeight / 2 - (matrix[1] * worldLocation.x + matrix[5] * worldLocation.y + matrix[9] * worldLocation.z + matrix[13]) * invW * (screenHeight / 2)
+    // محرك البحث الديناميكي في الذاكرة (Pattern Scan)
+    fun patternScan(pid: Int, startAddress: Long, regionSize: Long, patternStr: String): Long {
+        try {
+            val (patternBytes, mask) = parsePattern(patternStr)
+            val memFile = RandomAccessFile("/proc/$pid/mem", "r")
+            val bufferSize = 4096 * 4
+            val buffer = ByteArray(bufferSize)
+            var currentAddress = startAddress
+            val endAddress = startAddress + regionSize
+            
+            while (currentAddress < endAddress) {
+                try {
+                    memFile.seek(currentAddress)
+                    val bytesRead = memFile.read(buffer)
+                    if (bytesRead <= 0) break
+                    
+                    for (i in 0..bytesRead - patternBytes.size) {
+                        var found = true
+                        for (j in patternBytes.indices) {
+                            if (mask[j] == 'x' && buffer[i + j] != patternBytes[j]) {
+                                found = false
+                                break
+                            }
+                        }
+                        if (found) {
+                            memFile.close()
+                            return currentAddress + i
+                        }
+                    }
+                } catch (e: Exception) {}
+                currentAddress += (bufferSize - patternBytes.size)
+            }
+            memFile.close()
+        } catch (e: Exception) {}
+        return 0L
+    }
 
-        return Point2D(x, y, true)
+    // World to Screen Projection
+    fun worldToScreen(pos: Vector3, matrix: FloatArray, width: Int, height: Int): ScreenPoint {
+        val transX = matrix[3] * pos.x + matrix[7] * pos.y + matrix[11] * pos.z + matrix[15]
+        if (transX < 0.01f) return ScreenPoint(0f, 0f, false)
+
+        val transY = matrix[0] * pos.x + matrix[4] * pos.y + matrix[8] * pos.z + matrix[12]
+        val transZ = matrix[1] * pos.x + matrix[5] * pos.y + matrix[9] * pos.z + matrix[13]
+
+        val screenX = (width / 2.0f) + (transY * (width / 2.0f) / transX)
+        val screenY = (height / 2.0f) - (transZ * (height / 2.0f) / transX)
+
+        return ScreenPoint(screenX, screenY, true)
     }
 }
