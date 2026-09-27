@@ -42,7 +42,7 @@ class OverlayService : Service() {
 
     private lateinit var windowManager: WindowManager
     private lateinit var prefs: PrefsManager
-    private val mainHandler = Handler(Looper.`object`?.let { it } ?: Looper.getMainLooper())
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private var bubbleView: View? = null
     private var panelView: View? = null
@@ -53,7 +53,6 @@ class OverlayService : Service() {
 
     private val toggleButtons = arrayOfNulls<Button>(12)
     private var isRunning = true
-    private val loopHandler = Handler(Looper.getMainLooper())
 
     override fun onCreate() {
         super.onCreate()
@@ -69,7 +68,6 @@ class OverlayService : Service() {
         applyCoreAlign(prefs.getCoreAlign())
         setPanelVisible(prefs.isOverlayExpanded())
 
-        // بدء حلقة التحديث والقراءة المستمرة للذاكرة والأوفسيتات
         startMemoryLoop()
     }
 
@@ -158,7 +156,6 @@ class OverlayService : Service() {
         }
     }
 
-    // حلقة القراءة المستمرة وتحديث بيانات الكاشف والـ GW
     private fun startMemoryLoop() {
         thread {
             while (isRunning) {
@@ -169,23 +166,21 @@ class OverlayService : Service() {
                         if (baseAddr != 0L) {
                             val uWorldAddr = baseAddr + MemoryUtils.OFFSET_UWORLD
                             val uWorld = MemoryUtils.readLong(pid, uWorldAddr)
-                            
                             val isGwTrue = uWorld != 0L
                             
-                            // تحديث حالة العرض والبيانات في ESPView
                             mainHandler.post {
-                                espView?.updateGameData(pid, isGwTrue, 0) // سيتم تمرير عدد اللاعبين الفعلي لاحقاً
+                                espView?.invalidate()
                             }
                         } else {
                             mainHandler.post {
-                                espView?.updateGameData(pid, false, 0)
+                                espView?.invalidate()
                             }
                         }
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
-                Thread.sleep(100) // التحديث كل 100 ملي ثانية لمنع استهلاك المعالج
+                Thread.sleep(100)
             }
         }
     }
@@ -393,7 +388,7 @@ class OverlayService : Service() {
     private fun showBandwidthUsage() {
         val rx = TrafficStats.getTotalRxBytes() / (1024 * 1024)
         val tx = TrafficStats.getTotalTxBytes() / (1024 * 1024)
-        toast("تحميل: ${rx}MB \vert{} رفع: ${tx}MB")
+        toast("تحميل: ${rx}MB | رفع: ${tx}MB")
     }
 
     private fun showPacketStats() {
@@ -512,17 +507,15 @@ class OverlayService : Service() {
                         it.y = params.y
                         panelView?.let { pv -> runCatching { windowManager.updateViewLayout(pv, it) } }
                     }
-                    return typeTrue()
+                    return true
                 }
                 MotionEvent.ACTION_UP -> {
                     prefs.setOverlayPosition(params.x, params.y)
                     onTap(!moved)
-                    return typeTrue()
+                    return true
                 }
             }
             return false
         }
-        
-        private fun typeTrue(): Boolean = true
     }
 }
