@@ -31,15 +31,10 @@ class ESPView(context: Context) : View(context) {
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
-    // الإزحافات الأساسية للعبة
-    private val GWORLD_OFFSET = 0xF624D40L
-    private val VIEW_WORLD_OFFSET = 0xF5FBFD0L
-
-    // الإزحافات الداخلية المحدثة من القائمة الشاملة
-    private val OFFSET_PERSISTENT_LEVEL = 0x30L
-    private val OFFSET_ACTORS_ARRAY = 0x98L
-    private val OFFSET_ROOT_COMPONENT = 0x208L
-    private val OFFSET_RELATIVE_LOCATION = 0x1E4L
+    // العناوين الجديدة المستخرجة من سكريبت التليجرام الثاني
+    private val GWORLD_BASE_OFFSET = 0xE6D36F0L // معتمد على GUObject / GWorld المقابل
+    private val VIEW_WORLD_OFFSET = 0xE6D63E0L  // Vworld_Offsets الدقيق
+    private val OFFSET_ACTORS_ARRAY = 0xA0L     // Actors_Offset المؤكدة
 
     init {
         startLoop()
@@ -57,34 +52,35 @@ class ESPView(context: Context) : View(context) {
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        // 1. قراءة الـ ViewWorld Matrix
+                        // 1. قراءة الـ ViewWorld Matrix بالعنوان الجديد
                         viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
 
-                        // 2. قراءة GWorld
-                        val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_OFFSET)
+                        // 2. تطبيق معادلة GWorld الجديدة للوصول السليم
+                        val step1 = MemoryUtils.readLong(currentPid, libBase + GWORLD_BASE_OFFSET)
+                        val step2 = if (step1 != 0L) MemoryUtils.readLong(currentPid, step1 - 0x20L) else 0L
+                        val gWorldPtr = if (step2 != 0L) step2 + 0x30L else 0L
                         
-                        var actorsCountFound = 0
+                        var count = 0
                         synchronized(playerList) {
                             playerList.clear()
-                            
                             if (gWorldPtr != 0L) {
-                                val persistentLevel = MemoryUtils.readLong(currentPid, gWorldPtr + OFFSET_PERSISTENT_LEVEL)
+                                val persistentLevel = MemoryUtils.readLong(currentPid, gWorldPtr + 0x30L)
                                 if (persistentLevel != 0L) {
+                                    // قراءة مصفوفة الكائنات بالإزحاف 0xA0
                                     val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + OFFSET_ACTORS_ARRAY)
                                     if (actorsPtr != 0L) {
-                                        for (i in 0 until 120) {
-                                            val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L).toLong())
+                                        for (i in 0 until 100) {
+                                            val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L))
                                             if (actor != 0L) {
-                                                val rootComponent = MemoryUtils.readLong(currentPid, actor + OFFSET_ROOT_COMPONENT)
+                                                val rootComponent = MemoryUtils.readLong(currentPid, actor + 0x208L)
                                                 if (rootComponent != 0L) {
-                                                    // قراءة الإحداثيات باستخدام RelativeLocation (0x1E4)
-                                                    val x = MemoryUtils.readFloat(currentPid, rootComponent + OFFSET_RELATIVE_LOCATION)
-                                                    val y = MemoryUtils.readFloat(currentPid, rootComponent + OFFSET_RELATIVE_LOCATION + 4L)
-                                                    val z = MemoryUtils.readFloat(currentPid, rootComponent + OFFSET_RELATIVE_LOCATION + 8L)
+                                                    val x = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E4L)
+                                                    val y = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E8L)
+                                                    val z = MemoryUtils.readFloat(currentPid, rootComponent + 0x1ECL)
                                                     
                                                     if (x != 0f || y != 0f) {
                                                         playerList.add(MemoryUtils.Vector3(x, y, z))
-                                                        actorsCountFound++
+                                                        count++
                                                     }
                                                 }
                                             }
@@ -93,9 +89,7 @@ class ESPView(context: Context) : View(context) {
                                 }
                             }
                         }
-                        
-                        statusMessage = "PID: $currentPid | GW: ${gWorldPtr != 0L} | Players: $actorsCountFound"
-                        
+                        statusMessage = "PID: $currentPid | GW: ${gWorldPtr != 0L} | Players: $count"
                     } else {
                         statusMessage = "PID: $currentPid | WAITING FOR LIB..."
                     }
@@ -113,7 +107,6 @@ class ESPView(context: Context) : View(context) {
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-
         canvas.drawText(statusMessage, 30f, 120f, textPaint)
 
         synchronized(playerList) {
