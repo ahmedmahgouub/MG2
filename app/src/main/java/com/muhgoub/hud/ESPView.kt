@@ -25,15 +25,18 @@ class ESPView(context: Context) : View(context) {
 
     private var scope: CoroutineScope? = null
     private var isRunning = false
-    private var statusMessage = "MUHGOUB ESP - 4.6.1 READY"
+    private var statusMessage = "MUHGOUB ESP - 4.6.1 RUNNING"
     private var currentPid = -1
     
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
-    // العناوين المحدثة للنسخة 4.6.1 (GWorld مباشر)
+    // الأوفيسات الأساسية للنسخة 4.6.1
     private val GWORLD_BASE_OFFSET = 0xF624D40L
     private val VIEW_WORLD_OFFSET = 0xF5FBFD0L
+    
+    // أوفيسات الـ Actors المحدثة للنسخ الحديثة
+    private val OFFSET_PERSISTENT_LEVEL = 0x30L
     private val OFFSET_ACTORS_ARRAY = 0xA0L
     private val OFFSET_ACTORS_COUNT = 0xA8L
 
@@ -53,26 +56,28 @@ class ESPView(context: Context) : View(context) {
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        // 1. قراءة الـ ViewWorld Matrix بالإحداثيات الجديدة
+                        // 1. قراءة الـ ViewWorld Matrix
                         viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
 
-                        // 2. قراءة الـ GWorld مباشرة بالأوفيس الجديد بدون معادلة قديمة
+                        // 2. قراءة الـ GWorld مباشرة
                         val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_BASE_OFFSET)
                         
                         var count = 0
                         synchronized(playerList) {
                             playerList.clear()
                             if (gWorldPtr != 0L) {
-                                val persistentLevel = MemoryUtils.readLong(currentPid, gWorldPtr + 0x30L)
+                                // قراءة الـ PersistentLevel
+                                val persistentLevel = MemoryUtils.readLong(currentPid, gWorldPtr + OFFSET_PERSISTENT_LEVEL)
                                 if (persistentLevel != 0L) {
                                     val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + OFFSET_ACTORS_ARRAY)
                                     val actorsCount = MemoryUtils.readLong(currentPid, persistentLevel + OFFSET_ACTORS_COUNT).toInt()
                                     
-                                    if (actorsPtr != 0L && actorsCount > 0 && actorsCount < 20000) {
-                                        val maxCount = minOf(actorsCount, 500)
+                                    if (actorsPtr != 0L && actorsCount > 0 && actorsCount < 50000) {
+                                        val maxCount = minOf(actorsCount, 800)
                                         for (i in 0 until maxCount) {
                                             val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L))
                                             if (actor != 0L) {
+                                                // قراءة الـ RootComponent للـ Actor
                                                 val rootComponent = MemoryUtils.readLong(currentPid, actor + 0x208L)
                                                 if (rootComponent != 0L) {
                                                     val x = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E4L)
