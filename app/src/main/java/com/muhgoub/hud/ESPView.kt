@@ -61,12 +61,8 @@ class ESPView(context: Context) : View(context) {
                         
                         synchronized(playerList) {
                             playerList.clear()
-                            
-                            // كمرحلة تجريبية أولية لتأكيد عمل المصفوفة والأوفسيت:
-                            // لو قدرنا نقرأ الـ GWorld بنجاح، هنضيف نقطة اختبارية أمام الشاشة
                             if (gWorldPtr != 0L) {
-                                // نقطة اختبار مركزية مرتبطة بالعالم الافتراضي للتأكد من التطابق
-                                playerList.add(MemoryUtils.Vector3(0f, 0f, 100f))
+                                // جاهز لإضافة قراءة اللاعبين الحقيقية لاحقاً هنا
                             }
                         }
                     } else {
@@ -90,17 +86,19 @@ class ESPView(context: Context) : View(context) {
         // رسم الحالة وعنوان الأساس أعلى الشاشة
         canvas.drawText(statusMessage, 50f, 150f, textPaint)
 
+        // رسم صندوق تجريبي ثابت في منتصف الشاشة للتأكد من عمل الـ Canvas والرسم 100%
+        val cx = width / 2f
+        val cy = height / 2f
+        canvas.drawRect(cx - 50f, cy - 50f, cx + 50f, cy + 50f, enemyBoxPaint)
+        canvas.drawText("ESP WORKING [OK]", cx - 80f, cy - 60f, textPaint)
+
         // رسم العناصر المحولة من الذاكرة الحقيقية إلى الشاشة
         synchronized(playerList) {
             for (player in playerList) {
                 val pt = MemoryUtils.worldToScreen(player, viewMatrix, width, height)
                 if (pt.isValid) {
-                    val l = pt.x - 40f
-                    val t = pt.y - 100f
-                    val r = pt.x + 40f
-                    val b = pt.y + 100f
-                    canvas.drawRect(l, t, r, b, enemyBoxPaint)
-                    canvas.drawText("Target [OK]", l, t - 8f, textPaint)
+                    canvas.drawRect(pt.x - 40f, pt.y - 100f, pt.x + 40f, pt.y + 100f, enemyBoxPaint)
+                    canvas.drawText("Enemy", pt.x - 40f, pt.y - 108f, textPaint)
                 }
             }
         }
