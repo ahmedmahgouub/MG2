@@ -12,7 +12,7 @@ object MemoryUtils {
     external fun writeMemory(pid: Int, address: Long, buffer: ByteArray, size: Int): Boolean
 
     init {
-        System.loadLibrary("muhgoub_memory") // اسم مكتبة الـ C++ الخاصة بك
+        System.loadLibrary("muhgoub_memory")
     }
 
     fun findProcessId(packageName: String): Int {
@@ -35,7 +35,10 @@ object MemoryUtils {
         try {
             val mapsFile = File("/proc/$pid/maps")
             if (!mapsFile.exists()) return 0L
-            mapsFile.forEachLine { line ->
+            
+            // قراءة السطور بطريقة آمنة تماماً بدون lambdas أو return مشاكس
+            val lines = mapsFile.readLines()
+            for (line in lines) {
                 if (line.contains(moduleName) && line.contains("r-xp")) {
                     val addressPart = line.substringBefore("-")
                     return addressPart.toLong(16)
@@ -72,7 +75,7 @@ object MemoryUtils {
     }
 
     fun readMatrix(pid: Int, address: Long): FloatArray {
-        val buffer = ByteArray(64) // 16 floats * 4 bytes
+        val buffer = ByteArray(64)
         val matrix = FloatArray(16)
         if (readMemory(pid, address, buffer, 64)) {
             for (i in 0..15) {
