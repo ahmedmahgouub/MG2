@@ -1,55 +1,4 @@
-package com.muhgoub.hud
-
-import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.view.View
-import kotlinx.coroutines.*
-
-class ESPView(context: Context) : View(context) {
-
-    private val textPaint = Paint().apply {
-        color = Color.GREEN
-        textSize = 26f
-        isAntiAlias = true
-        setShadowLayer(4f, 0f, 0f, Color.BLACK)
-    }
-
-    private val enemyBoxPaint = Paint().apply {
-        color = Color.RED
-        style = Paint.Style.STROKE
-        strokeWidth = 3f
-        isAntiAlias = true
-    }
-
-    private var scope: CoroutineScope? = null
-    private var isRunning = false
-    private var statusMessage = "MUHGOUB ESP - READY"
-    private var currentPid = -1
-    
-    private var viewMatrix = FloatArray(16)
-    private val playerList = mutableListOf<MemoryUtils.Vector3>()
-
-    // تم تحديث الأوفسيتات بالقيم الحقيقية المستخرجة من libUE4.so
-    private val GWORLD_BASE_OFFSET = MemoryUtils.OFFSET_UWORLD
-    private val VIEW_WORLD_OFFSET = MemoryUtils.OFFSET_PROJECTION_MATRIX
-    private val OFFSET_PERSISTENT_LEVEL = 0x30L
-    private val OFFSET_ACTORS_ARRAY = 0xA0L
-    private val OFFSET_ACTORS_COUNT = 0xA8L
-
-    private val supportedPackages = arrayOf(
-        "com.tencent.ig",
-        "com.vng.pubgmobile",
-        "com.pubg.krmobile",
-        "com.rekoo.pubg"
-    )
-
-    init {
-        startLoop()
-    }
-
-    private fun startLoop() {
+private fun startLoop() {
         if (isRunning) return
         isRunning = true
         scope = CoroutineScope(Dispatchers.Default + Job())
@@ -68,33 +17,39 @@ class ESPView(context: Context) : View(context) {
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        // قراءة Matrix باستخدام الأوفسيت الجديد
-                        viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
+                        // قراءة Matrix بدقة وثبات
+                        val tempMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
+                        if (tempMatrix[0] != 0f) {
+                            viewMatrix = tempMatrix
+                        }
                         
-                        // قراءة GWorld باستخدام الأوفسيت الجديد
+                        // قراءة GWorld مع التحقق من صحة المؤشر لمنع التذبذب (true/false)
                         val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_BASE_OFFSET)
                         
                         var count = 0
                         val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
 
-                        if (gWorldPtr != 0L && gWorldPtr > 0x10000000L) {
+                        // التحقق من أن عنوان GWorld في النطاق الصحيح للذاكرة
+                        if (gWorldPtr != 0L && gWorldPtr > 0x10000000L && gWorldPtr < 0x7FFFFFFFFFFFFFFL) {
                             val persistentLevel = MemoryUtils.readLong(currentPid, gWorldPtr + OFFSET_PERSISTENT_LEVEL)
                             if (persistentLevel != 0L && persistentLevel > 0x10000000L) {
                                 val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + OFFSET_ACTORS_ARRAY)
                                 val actorsCount = MemoryUtils.readLong(currentPid, persistentLevel + OFFSET_ACTORS_COUNT).toInt()
                                 
-                                if (actorsPtr != 0L && actorsCount in 1..5000) {
-                                    val maxCount = minOf(actorsCount, 500)
+                                if (actorsPtr != 0L && actorsCount in 1..10000) {
+                                    val maxCount = minOf(actorsCount, 800)
                                     for (i in 0 until maxCount) {
                                         val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L))
                                         if (actor != 0L && actor > 0x10000000L) {
+                                            // قراءة الكومبوننت والتأكد من إحداثيات اللاعب الحقيقية
                                             val rootComponent = MemoryUtils.readLong(currentPid, actor + 0x208L)
                                             if (rootComponent != 0L && rootComponent > 0x10000000L) {
                                                 val x = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E4L)
                                                 val y = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E8L)
                                                 val z = MemoryUtils.readFloat(currentPid, rootComponent + 0x1ECL)
                                                 
-                                                if (x != 0f || y != 0f) {
+                                                // فلترة الإحداثيات الوهمية لجلب اللاعبين الحقيقيين فقط
+                                                if (x != 0f && y != 0f && Math.abs(x) < 500000f && Math.abs(y) < 500000f) {
                                                     tempPlayers.add(MemoryUtils.Vector3(x, y, z))
                                                     count++
                                                 }
@@ -110,7 +65,9 @@ class ESPView(context: Context) : View(context) {
                             playerList.addAll(tempPlayers)
                         }
                         
-                        statusMessage = "PID: $currentPid | GW: ${gWorldPtr != 0L} | Players: $count"
+                        // تثبيت حالة GW: true طالما المؤشر سليماً
+                        val isGWValid = (gWorldPtr != 0L && gWorldPtr > 0x10000000L)
+                        statusMessage = "PID: $currentPid | GW: $isGWValid | Players: $count"
                     } else {
                         statusMessage = "PID: $currentPid | WAITING FOR LIB..."
                     }
@@ -121,33 +78,7 @@ class ESPView(context: Context) : View(context) {
                 withContext(Dispatchers.Main) {
                     invalidate()
                 }
-                delay(25L)
+                delay(15L) // تقليل التأخير لسرعة التحديث
             }
         }
     }
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        canvas.drawText(statusMessage, 30f, 120f, textPaint)
-
-        synchronized(playerList) {
-            for (player in playerList) {
-                val pt = MemoryUtils.worldToScreen(player, viewMatrix, width, height)
-                if (pt.isValid) {
-                    val l = pt.x - 40f
-                    val t = pt.y - 100f
-                    val r = pt.x + 40f
-                    val b = pt.y + 100f
-                    canvas.drawRect(l, t, r, b, enemyBoxPaint)
-                    canvas.drawText("Player", l, t - 8f, textPaint)
-                }
-            }
-        }
-    }
-
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
-        isRunning = false
-        scope?.cancel()
-    }
-}
