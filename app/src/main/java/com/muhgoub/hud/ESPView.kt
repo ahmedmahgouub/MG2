@@ -25,17 +25,17 @@ class ESPView(context: Context) : View(context) {
 
     private var scope: CoroutineScope? = null
     private var isRunning = false
-    private var statusMessage = "MUHGOUB ESP - 4.6 READY"
+    private var statusMessage = "MUHGOUB ESP - 4.6.1 READY"
     private var currentPid = -1
     
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
-    // العناوين المحدثة
-    private val GWORLD_BASE_OFFSET = 0xF3B85F8L
-    private val VIEW_WORLD_OFFSET = 0xE6D63E0L
+    // العناوين المحدثة للنسخة 4.6.1
+    private val GWORLD_BASE_OFFSET = 0xF624D40L
+    private val VIEW_WORLD_OFFSET = 0xF5FBFD0L
     private val OFFSET_ACTORS_ARRAY = 0xA0L
-    private val OFFSET_ACTORS_COUNT = 0xA8L // إزاحة عدد الكائنات بجانب المصفوفة في TArray
+    private val OFFSET_ACTORS_COUNT = 0xA8L
 
     init {
         startLoop()
@@ -53,10 +53,10 @@ class ESPView(context: Context) : View(context) {
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        // 1. قراءة الـ ViewWorld Matrix
+                        // 1. قراءة الـ ViewWorld Matrix بالإحداثيات الجديدة
                         viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
 
-                        // 2. تطبيق معادلة GWorld الدقيقة
+                        // 2. تطبيق معادلة GWorld بالبوينتر الجديد
                         val step1 = MemoryUtils.readLong(currentPid, libBase + GWORLD_BASE_OFFSET)
                         val step2 = if (step1 != 0L) MemoryUtils.readLong(currentPid, step1 - 0x20L) else 0L
                         val gWorldPtr = if (step2 != 0L) step2 + 0x30L else 0L
@@ -67,12 +67,10 @@ class ESPView(context: Context) : View(context) {
                             if (gWorldPtr != 0L) {
                                 val persistentLevel = MemoryUtils.readLong(currentPid, gWorldPtr + 0x30L)
                                 if (persistentLevel != 0L) {
-                                    // قراءة مصفوفة الكائنات والعدد الصحيح للـ TArray
                                     val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + OFFSET_ACTORS_ARRAY)
                                     val actorsCount = MemoryUtils.readLong(currentPid, persistentLevel + OFFSET_ACTORS_COUNT).toInt()
                                     
                                     if (actorsPtr != 0L && actorsCount > 0 && actorsCount < 20000) {
-                                        // اللف على العناصر بناءً على العدد الحقيقي المقروء من الذاكرة لضمان عدم حدوث Crash
                                         val maxCount = minOf(actorsCount, 500)
                                         for (i in 0 until maxCount) {
                                             val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L))
