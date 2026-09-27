@@ -7,6 +7,14 @@ import java.nio.ByteOrder
 
 object MemoryUtils {
 
+    // الأوفسيتات المحدثة والمستخرجة نهائياً بدقة
+    const val OFFSET_UWORLD: Long = 0x40D0C7F
+    const val OFFSET_PROJECTION_MATRIX: Long = 0x4126140
+    const val OFFSET_PERSISTENT_LEVEL: Long = 0x422C7C8
+    const val OFFSET_PLAYER_CONTROLLER: Long = 0x3FC17C0
+    const val OFFSET_PAWN_VELOCITY: Long = 0x40DDAD3
+    const val OFFSET_PLAYER_INDEX: Long = 0x412FEA8
+
     fun findProcessId(packageName: String): Int {
         var pid = -1
         try {
