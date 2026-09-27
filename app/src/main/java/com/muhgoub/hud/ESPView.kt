@@ -56,13 +56,15 @@ class ESPView(context: Context) : View(context) {
                         // 1. قراءة الـ ViewMatrix باستخدام أوفسيت x64 الحقيقي
                         viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
 
-                        // 2. قراءة العالم والكائنات عبر GWorld (0xF624D40)
+                        // 2. قراءة مؤشر العالم GWorld للوصول للاعبين
                         val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_OFFSET)
                         
                         synchronized(playerList) {
                             playerList.clear()
+                            
                             if (gWorldPtr != 0L) {
-                                // جاهز لإضافة قراءة اللاعبين الحقيقية لاحقاً هنا
+                                // هنا سيتم تطبيق حلقة قراءة الـ Actors والـ Entity List بالخطوات القادمة
+                                // حالياً جاري تجهيز مؤشرات الذاكرة بدقة عالية
                             }
                         }
                     } else {
@@ -86,19 +88,17 @@ class ESPView(context: Context) : View(context) {
         // رسم الحالة وعنوان الأساس أعلى الشاشة
         canvas.drawText(statusMessage, 50f, 150f, textPaint)
 
-        // رسم صندوق تجريبي ثابت في منتصف الشاشة للتأكد من عمل الـ Canvas والرسم 100%
-        val cx = width / 2f
-        val cy = height / 2f
-        canvas.drawRect(cx - 50f, cy - 50f, cx + 50f, cy + 50f, enemyBoxPaint)
-        canvas.drawText("ESP WORKING [OK]", cx - 80f, cy - 60f, textPaint)
-
-        // رسم العناصر المحولة من الذاكرة الحقيقية إلى الشاشة
+        // رسم اللاعبين الحقيقيين المحولين من الذاكرة عبر الـ WorldToScreen
         synchronized(playerList) {
             for (player in playerList) {
                 val pt = MemoryUtils.worldToScreen(player, viewMatrix, width, height)
                 if (pt.isValid) {
-                    canvas.drawRect(pt.x - 40f, pt.y - 100f, pt.x + 40f, pt.y + 100f, enemyBoxPaint)
-                    canvas.drawText("Enemy", pt.x - 40f, pt.y - 108f, textPaint)
+                    val l = pt.x - 40f
+                    val t = pt.y - 100f
+                    val r = pt.x + 40f
+                    val b = pt.y + 100f
+                    canvas.drawRect(l, t, r, b, enemyBoxPaint)
+                    canvas.drawText("Player", l, t - 8f, textPaint)
                 }
             }
         }
