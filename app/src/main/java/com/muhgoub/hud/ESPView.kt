@@ -56,34 +56,31 @@ class ESPView(context: Context) : View(context) {
                         // 1. قراءة الـ ViewMatrix باستخدام أوفسيت x64 الحقيقي
                         viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
 
-                        // 2. قراءة مؤشر العالم GWorld وجلب الكائنات
+                        // 2. قراءة مؤشر العالم GWorld وجلب الكائنات بطريقة آمنة
                         val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_OFFSET)
                         
                         synchronized(playerList) {
                             playerList.clear()
                             
                             if (gWorldPtr != 0L) {
-                                // جلب PersistentLevel من GWorld (أوفسيت شائع في النسخ الحالية 0x30 أو ما يعادله للـ PersistentLevel)
                                 val persistentLevel = MemoryUtils.readLong(currentPid, gWorldPtr + 0x30L)
                                 if (persistentLevel != 0L) {
-                                    val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + 0x98L) // Actors Array
-                                    val actorsCount = MemoryUtils.readInt(currentPid, persistentLevel + 0xA0L) // Actors Count
+                                    val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + 0x98L)
                                     
-                                    // قراءة آمنة لعدد محدود من الكائنات لمنع أي تهنيج
-                                    val maxCount = minOf(actorsCount, 250)
-                                    for (i in 0 until maxCount) {
-                                        val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L).toLong())
-                                        if (actor != 0L) {
-                                            // قراءة موقع الكائن (RootComponent -> RelativeLocation)
-                                            val rootComponent = MemoryUtils.readLong(currentPid, actor + 0x140L)
-                                            if (rootComponent != 0L) {
-                                                val x = MemoryUtils.readFloat(currentPid, rootComponent + 0x1C0L)
-                                                val y = MemoryUtils.readFloat(currentPid, rootComponent + 0x1C4L)
-                                                val z = MemoryUtils.readFloat(currentPid, rootComponent + 0x1C8L)
-                                                
-                                                // التحقق من صحة الإحداثيات وإضافتها للقائمة
-                                                if (x != 0f || y != 0f) {
-                                                    playerList.add(MemoryUtils.Vector3(x, y, z))
+                                    if (actorsPtr != 0L) {
+                                        // فحص عدد محدد من الكائنات لتجنب أي مشاكل في القراءة أو الدوال
+                                        for (i in 0 until 100) {
+                                            val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L).toLong())
+                                            if (actor != 0L) {
+                                                val rootComponent = MemoryUtils.readLong(currentPid, actor + 0x140L)
+                                                if (rootComponent != 0L) {
+                                                    val x = MemoryUtils.readFloat(currentPid, rootComponent + 0x1C0L)
+                                                    val y = MemoryUtils.readFloat(currentPid, rootComponent + 0x1C4L)
+                                                    val z = MemoryUtils.readFloat(currentPid, rootComponent + 0x1C8L)
+                                                    
+                                                    if (x != 0f || y != 0f) {
+                                                        playerList.add(MemoryUtils.Vector3(x, y, z))
+                                                    }
                                                 }
                                             }
                                         }
