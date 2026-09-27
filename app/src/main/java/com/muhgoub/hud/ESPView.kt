@@ -25,13 +25,13 @@ class ESPView(context: Context) : View(context) {
 
     private var scope: CoroutineScope? = null
     private var isRunning = false
-    private var statusMessage = "MUHGOUB ESP - READY"
+    private var statusMessage = "MUHGOUB ESP - 4.6 READY"
     private var currentPid = -1
     
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
-    // إزحافات النسخة 64-bit
+    // إزحافات التحديث الجديد 4.6 (x64) المؤكدة
     private val GWORLD_OFFSET = 0xF624D40L
     private val VIEW_WORLD_OFFSET = 0xF5FBFD0L
 
@@ -51,13 +51,13 @@ class ESPView(context: Context) : View(context) {
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        // 1. قراءة الـ ViewMatrix
+                        // 1. قراءة الـ ViewWorld Matrix
                         viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
 
-                        // 2. قراءة GWorld وفحص الـ Pointers لتشخيص البيانات
+                        // 2. قراءة GWorld للتحديث 4.6
                         val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_OFFSET)
                         
-                        var foundCount = 0
+                        var actorsCountFound = 0
                         synchronized(playerList) {
                             playerList.clear()
                             
@@ -65,9 +65,8 @@ class ESPView(context: Context) : View(context) {
                                 val persistentLevel = MemoryUtils.readLong(currentPid, gWorldPtr + 0x30L)
                                 if (persistentLevel != 0L) {
                                     val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + 0x98L)
-                                    
                                     if (actorsPtr != 0L) {
-                                        for (i in 0 until 50) {
+                                        for (i in 0 until 120) {
                                             val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L).toLong())
                                             if (actor != 0L) {
                                                 val rootComponent = MemoryUtils.readLong(currentPid, actor + 0x140L)
@@ -78,7 +77,7 @@ class ESPView(context: Context) : View(context) {
                                                     
                                                     if (x != 0f || y != 0f) {
                                                         playerList.add(MemoryUtils.Vector3(x, y, z))
-                                                        foundCount++
+                                                        actorsCountFound++
                                                     }
                                                 }
                                             }
@@ -88,8 +87,7 @@ class ESPView(context: Context) : View(context) {
                             }
                         }
                         
-                        // تحديث رسالة الحالة لعرض نتيجة الفحص وقيمة الـ GWorld مباشرة على الشاشة
-                        statusMessage = "PID: $currentPid | GW: ${gWorldPtr != 0L} | Actors: $foundCount"
+                        statusMessage = "PID: $currentPid | GW: ${gWorldPtr != 0L} | Players: $actorsCountFound"
                         
                     } else {
                         statusMessage = "PID: $currentPid | WAITING FOR LIB..."
@@ -109,10 +107,8 @@ class ESPView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // رسم الحالة ومعلومات التشخيص أعلى الشاشة
         canvas.drawText(statusMessage, 30f, 120f, textPaint)
 
-        // رسم المربعات للأعداء عند توفر إحداثيات صالحة
         synchronized(playerList) {
             for (player in playerList) {
                 val pt = MemoryUtils.worldToScreen(player, viewMatrix, width, height)
