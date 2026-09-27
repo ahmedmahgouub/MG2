@@ -31,7 +31,7 @@ class ESPView @JvmOverloads constructor(
 
     private val textPaint = Paint().apply {
         color = android.graphics.Color.GREEN
-        textSize = 30f // تصغير الخط قليلاً لتسع تفاصيل الـ Debug
+        textSize = 30f
         isAntiAlias = true
     }
 
@@ -71,15 +71,23 @@ class ESPView @JvmOverloads constructor(
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        val tempMatrix = MemoryUtils.readMatrix(currentPid, libBase + MemoryUtils.OFFSET_PROJECTION_MATRIX)
+                        // قراءة مصفوفة الكاميرا الإسقاطية
+                        val tempMatrix = MemoryUtils.readMatrix(currentPid, libBase + 0x2050L) 
                         if (tempMatrix[0] != 0f) {
                             viewMatrix = tempMatrix
                         }
                         
-                        // قراءة UWorld الخام للفحص
-                        val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + MemoryUtils.OFFSET_UWORLD)
-                        if (gWorldPtr != 0L && gWorldPtr > 0x10000000L) {
-                            cachedGWorld = gWorldPtr
+                        // البحث الديناميكي أوتوماتيكياً عن GWorld إذا لم يتم تخزينه مسبقاً
+                        if (cachedGWorld == 0L) {
+                            val moduleSize = 0x8000000L // حجم المكتبة التقريبي
+                            // البصمة الخاصة بالـ GWorld (يمكنك تحديثها لاحقاً ببصمة التحديث الحالي)
+                            val gWorldPattern = "48 8B 05 ? ? ? ? 48 8B 48 08" 
+                            val gWorldAddress = MemoryUtils.patternScan(currentPid, libBase, moduleSize, gWorldPattern)
+                            
+                            if (gWorldAddress != 0L) {
+                                val offset = MemoryUtils.readInt(currentPid, gWorldAddress + 3)
+                                cachedGWorld = gWorldAddress + 7 + offset
+                            }
                         }
                         
                         var count = 0
@@ -87,26 +95,29 @@ class ESPView @JvmOverloads constructor(
                         var actorsCountVal = 0
                         val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
 
-                        if (cachedGWorld != 0L && cachedGWorld > 0x10000000L) {
-                            persistentLevel = MemoryUtils.readLong(currentPid, cachedGWorld + MemoryUtils.OFFSET_PERSISTENT_LEVEL)
-                            if (persistentLevel != 0L && persistentLevel > 0x10000000L) {
-                                val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + 0x98L)
-                                actorsCountVal = MemoryUtils.readLong(currentPid, persistentLevel + 0xA0L).toInt()
-                                
-                                if (actorsPtr != 0L && actorsCountVal in 1..2000) {
-                                    val maxCount = minOf(actorsCountVal, 500)
-                                    for (i in 0 until maxCount) {
-                                        val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L))
-                                        if (actor != 0L && actor > 0x10000000L) {
-                                            val rootComponent = MemoryUtils.readLong(currentPid, actor + 0x208L)
-                                            if (rootComponent != 0L && rootComponent > 0x10000000L) {
-                                                val x = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E4L)
-                                                val y = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E8L)
-                                                val z = MemoryUtils.readFloat(currentPid, rootComponent + 0x1ECL)
-                                                
-                                                if (x != 0f && y != 0f) {
-                                                    tempPlayers.add(MemoryUtils.Vector3(x, y, z))
-                                                    count++
+                        if (cachedGWorld != 0L) {
+                            val resolvedGWorld = MemoryUtils.readLong(currentPid, cachedGWorld)
+                            if (resolvedGWorld != 0L && resolvedGWorld > 0x10000000L) {
+                                persistentLevel = MemoryUtils.readLong(currentPid, resolvedGWorld + 0x30L)
+                                if (persistentLevel != 0L && persistentLevel > 0x10000000L) {
+                                    val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + 0x98L)
+                                    actorsCountVal = MemoryUtils.readLong(currentPid, persistentLevel + 0xA0L).toInt()
+                                    
+                                    if (actorsPtr != 0L && actorsCountVal in 1..2000) {
+                                        val maxCount = minOf(actorsCountVal, 500)
+                                        for (i in 0 until maxCount) {
+                                            val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L))
+                                            if (actor != 0L && actor > 0x10000000L) {
+                                                val rootComponent = MemoryUtils.readLong(currentPid, actor + 0x208L)
+                                                if (rootComponent != 0L && rootComponent > 0x10000000L) {
+                                                    val x = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E4L)
+                                                    val y = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E8L)
+                                                    val z = MemoryUtils.readFloat(currentPid, rootComponent + 0x1ECL)
+                                                    
+                                                    if (x != 0f && y != 0f) {
+                                                        tempPlayers.add(MemoryUtils.Vector3(x, y, z))
+                                                        count++
+                                                    }
                                                 }
                                             }
                                         }
@@ -120,7 +131,6 @@ class ESPView @JvmOverloads constructor(
                             playerList.addAll(tempPlayers)
                         }
                         
-                        // طباعة قيم الفحص التفصيلية على الشاشة مباشرة
                         statusMessage = "PID:$currentPid | GW:${cachedGWorld != 0L} | PL:${persistentLevel != 0L} | Act:$actorsCountVal | P:$count"
                     } else {
                         statusMessage = "PID: $currentPid | WAITING FOR LIB..."
