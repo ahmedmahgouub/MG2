@@ -1,141 +1,99 @@
 package com.muhgoub.hud
 
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
+import java.io.File
 
 object MemoryUtils {
 
-    fun findProcessId(packageName: String): Int {
-        var pid = -1
-        try {
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "pidof $packageName"))
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val line = reader.readLine()
-            if (!line.isNullOrEmpty()) {
-                pid = line.trim().toInt()
-            }
-            process.waitFor()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return pid
+    data class Vector3(val x: Float, val y: Float, val z: Float)
+    data class ScreenPoint(val x: Float, val y: Float, val isValid: Boolean)
+
+    external fun attachProcess(pid: Int): Boolean
+    external fun readMemory(pid: Int, address: Long, buffer: ByteArray, size: Int): Boolean
+    external fun writeMemory(pid: Int, address: Long, buffer: ByteArray, size: Int): Boolean
+
+    init {
+        System.loadLibrary("muhgoub_memory") // اسم مكتبة الـ C++ الخاصة بك
     }
 
-    fun getModuleBase(pid: Int, moduleName: String = "libUE4.so"): Long {
+    fun findProcessId(packageName: String): Int {
+        val dir = File("/proc")
+        if (!dir.exists()) return -1
+        for (cmdlineFile in dir.listFiles() ?: arrayOf()) {
+            if (!cmdlineFile.isDirectory) continue
+            val pid = cmdlineFile.name.toIntOrNull() ?: continue
+            try {
+                val pkg = File(cmdlineFile, "cmdline").readText().trim { it <= ' ' }
+                if (pkg == packageName) return pid
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+        return -1
+    }
+
+    fun getModuleBase(pid: Int, moduleName: String): Long {
         try {
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "cat /proc/$pid/maps"))
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            var line: String?
-            while (reader.readLine().also { line = it } != null) {
-                if (line!!.contains(moduleName) && line!!.contains("r-xp")) {
-                    val addrPart = line!!.substringBefore("-")
-                    return addrPart.toLong(16)
+            val mapsFile = File("/proc/$pid/maps")
+            if (!mapsFile.exists()) return 0L
+            mapsFile.forEachLine { line ->
+                if (line.contains(moduleName) && line.contains("r-xp")) {
+                    val addressPart = line.substringBefore("-")
+                    return addressPart.toLong(16)
                 }
             }
-            process.waitFor()
         } catch (e: Exception) {
             e.printStackTrace()
         }
         return 0L
     }
 
-    data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
-    data class Vector3(val x: Float, val y: Float, val z: Float)
+    fun readLong(pid: Int, address: Long): Long {
+        val buffer = ByteArray(8)
+        if (readMemory(pid, address, buffer, 8)) {
+            var value = 0L
+            for (i in 0..7) {
+                value = value or ((buffer[i].toLong() and 0xFF) shl (8 * i))
+            }
+            return value
+        }
+        return 0L
+    }
 
     fun readFloat(pid: Int, address: Long): Float {
-        try {
-            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=4 2>/dev/null"
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-            val inputStream = process.inputStream
-            val buffer = ByteArray(4)
-            val bytesRead = inputStream.read(buffer)
-            process.waitFor()
-            if (bytesRead == 4) {
-                return ByteBuffer.wrap(buffer)
-                    .order(ByteOrder.LITTLE_ENDIAN)
-                    .float
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        val buffer = ByteArray(4)
+        if (readMemory(pid, address, buffer, 4)) {
+            val intBits = (buffer[0].toInt() and 0xFF) or
+                    ((buffer[1].toInt() and 0xFF) shl 8) or
+                    ((buffer[2].toInt() and 0xFF) shl 16) or
+                    ((buffer[3].toInt() and 0xFF) shl 24)
+            return Float.fromBits(intBits)
         }
         return 0f
     }
 
-    fun readLong(pid: Int, address: Long): Long {
-        try {
-            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=8 2>/dev/null"
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-            val inputStream = process.inputStream
-            val buffer = ByteArray(8)
-            val bytesRead = inputStream.read(buffer)
-            process.waitFor()
-            if (bytesRead == 8) {
-                return ByteBuffer.wrap(buffer)
-                    .order(ByteOrder.LITTLE_ENDIAN)
-                    .long
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return 0L
-    }
-
-    fun readVector3(pid: Int, address: Long): Vector3 {
-        try {
-            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=12 2>/dev/null"
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-            val inputStream = process.inputStream
-            val buffer = ByteArray(12)
-            val bytesRead = inputStream.read(buffer)
-            process.waitFor()
-            if (bytesRead == 12) {
-                val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN)
-                val x = byteBuffer.float
-                val y = byteBuffer.float
-                val z = byteBuffer.float
-                return Vector3(x, y, z)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return Vector3(0f, 0f, 0f)
-    }
-
     fun readMatrix(pid: Int, address: Long): FloatArray {
+        val buffer = ByteArray(64) // 16 floats * 4 bytes
         val matrix = FloatArray(16)
-        try {
-            val byteCount = 16 * 4
-            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=$byteCount 2>/dev/null"
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-            val inputStream = process.inputStream
-            val buffer = ByteArray(byteCount)
-            val bytesRead = inputStream.read(buffer)
-            process.waitFor()
-            if (bytesRead == byteCount) {
-                val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN)
-                for (i in 0 until 16) {
-                    matrix[i] = byteBuffer.float
-                }
+        if (readMemory(pid, address, buffer, 64)) {
+            for (i in 0..15) {
+                val intBits = (buffer[i * 4].toInt() and 0xFF) or
+                        ((buffer[i * 4 + 1].toInt() and 0xFF) shl 8) or
+                        ((buffer[i * 4 + 2].toInt() and 0xFF) shl 16) or
+                        ((buffer[i * 4 + 3].toInt() and 0xFF) shl 24)
+                matrix[i] = Float.fromBits(intBits)
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
         return matrix
     }
 
-    fun worldToScreen(worldLocation: Vector3, matrix: FloatArray, screenWidth: Int, screenHeight: Int): Point2D {
-        val w = matrix[3] * worldLocation.x + matrix[7] * worldLocation.y + matrix[11] * worldLocation.z + matrix[15]
+    fun worldToScreen(worldLocation: Vector3, matrix: FloatArray, width: Int, height: Int): ScreenPoint {
+        val transformedZ = matrix[3] * worldLocation.x + matrix[7] * worldLocation.y + matrix[11] * worldLocation.z + matrix[15]
+        if (transformedZ < 0.01f) return ScreenPoint(0f, 0f, false)
 
-        if (w < 0.01f) {
-            return Point2D(0f, 0f, false)
-        }
+        val inv = 1.0f / transformedZ
+        val screenX = (width / 2.0f) + (matrix[0] * worldLocation.x + matrix[4] * worldLocation.y + matrix[8] * worldLocation.z + matrix[12]) * inv * (width / 2.0f)
+        val screenY = (height / 2.0f) - (matrix[1] * worldLocation.x + matrix[5] * worldLocation.y + matrix[9] * worldLocation.z + matrix[13]) * inv * (height / 2.0f)
 
-        val invW = 1.0f / w
-        val x = screenWidth / 2 + (matrix[0] * worldLocation.x + matrix[4] * worldLocation.y + matrix[8] * worldLocation.z + matrix[12]) * invW * (screenWidth / 2)
-        val y = screenHeight / 2 - (matrix[1] * worldLocation.x + matrix[5] * worldLocation.y + matrix[9] * worldLocation.z + matrix[13]) * invW * (screenHeight / 2)
-
-        return Point2D(x, y, true)
+        return ScreenPoint(screenX, screenY, true)
     }
 }
