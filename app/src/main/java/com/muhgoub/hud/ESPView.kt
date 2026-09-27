@@ -11,76 +11,82 @@ class ESPView(context: Context) : View(context) {
 
     private val textPaint = Paint().apply {
         color = Color.GREEN
-        textSize = 26f
+        textSize = 28f
         isAntiAlias = true
         setShadowLayer(4f, 0f, 0f, Color.BLACK)
     }
 
-    private val enemyBoxPaint = Paint().apply {
+    private val boxPaint = Paint().apply {
         color = Color.RED
         style = Paint.Style.STROKE
         strokeWidth = 3f
         isAntiAlias = true
     }
 
-    private var scope: CoroutineScope? = null
+    private var job: Job? = null
     private var isRunning = false
-    private var statusMessage = "MUHGOUB ESP - 4.6.1 READY"
+    private var statusMessage = "MUHGOUB ROOT ESP - READY"
     private var currentPid = -1
-    
+
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
-    // العناوين المحدثة للنسخة 4.6.1 (GWorld مباشر)
-    private val GWORLD_BASE_OFFSET = 0xF624D40L
+    // العناوين والإزاحات الثابتة
     private val VIEW_WORLD_OFFSET = 0xF5FBFD0L
+    private val GWORLD_OFFSET = 0xF624D40L
+    private val OFFSET_PERSISTENT_LEVEL = 0x30L
     private val OFFSET_ACTORS_ARRAY = 0xA0L
     private val OFFSET_ACTORS_COUNT = 0xA8L
 
-    init {
-        startLoop()
+    fun toggleEsp(enable: Boolean) {
+        if (enable) {
+            if (isRunning) return
+            isRunning = true
+            statusMessage = "STARTING..."
+            startLoop()
+        } else {
+            isRunning = false
+            job?.cancel()
+            statusMessage = "STOPPED"
+            invalidate()
+        }
     }
 
     private fun startLoop() {
-        if (isRunning) return
-        isRunning = true
-        scope = CoroutineScope(Dispatchers.Default + Job())
-        scope?.launch {
+        job = CoroutineScope(Dispatchers.Default + SupervisorJob()).launch {
             while (isRunning) {
-                currentPid = MemoryUtils.findProcessId("com.tencent.ig")
-                
-                if (currentPid != -1) {
-                    val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
-                    
-                    if (libBase != 0L) {
-                        // 1. قراءة الـ ViewWorld Matrix بالإحداثيات الجديدة
-                        viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
+                try {
+                    currentPid = MemoryUtils.findProcessId("com.tencent.ig")
+                    if (currentPid != -1) {
+                        val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
+                        if (libBase != 0L) {
+                            // قراءة الماتريكس
+                            val matrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
+                            if (matrix.size == 16) {
+                                viewMatrix = matrix
+                            }
 
-                        // 2. قراءة الـ GWorld مباشرة بالأوفيس الجديد بدون معادلة قديمة
-                        val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_BASE_OFFSET)
-                        
-                        var count = 0
-                        synchronized(playerList) {
-                            playerList.clear()
-                            if (gWorldPtr != 0L) {
-                                val persistentLevel = MemoryUtils.readLong(currentPid, gWorldPtr + 0x30L)
-                                if (persistentLevel != 0L) {
+                            // قراءة GWorld
+                            val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_OFFSET)
+                            var count = 0
+                            val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
+
+                            if (gWorldPtr != 0L && gWorldPtr > 0x10000000L) {
+                                val persistentLevel = MemoryUtils.readLong(currentPid, gWorldPtr + OFFSET_PERSISTENT_LEVEL)
+                                if (persistentLevel != 0L && persistentLevel > 0x10000000L) {
                                     val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + OFFSET_ACTORS_ARRAY)
                                     val actorsCount = MemoryUtils.readLong(currentPid, persistentLevel + OFFSET_ACTORS_COUNT).toInt()
-                                    
-                                    if (actorsPtr != 0L && actorsCount > 0 && actorsCount < 20000) {
-                                        val maxCount = minOf(actorsCount, 500)
+
+                                    if (actorsPtr != 0L && actorsCount in 1..5000) {
+                                        val maxCount = minOf(actorsCount, 300)
                                         for (i in 0 until maxCount) {
                                             val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L))
-                                            if (actor != 0L) {
+                                            if (actor != 0L && actor > 0x10000000L) {
                                                 val rootComponent = MemoryUtils.readLong(currentPid, actor + 0x208L)
-                                                if (rootComponent != 0L) {
-                                                    val x = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E4L)
-                                                    val y = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E8L)
-                                                    val z = MemoryUtils.readFloat(currentPid, rootComponent + 0x1ECL)
-                                                    
-                                                    if (x != 0f || y != 0f) {
-                                                        playerList.add(MemoryUtils.Vector3(x, y, z))
+                                                if (rootComponent != 0L && rootComponent > 0x10000000L) {
+                                                    val pos = MemoryUtils.readVector3(currentPid, rootComponent + 0x1E4L)
+                                                    if (pos.x != 0f || pos.y != 0f) {
+                                                        tempPlayers.add(pos)
                                                         count++
                                                     }
                                                 }
@@ -89,19 +95,26 @@ class ESPView(context: Context) : View(context) {
                                     }
                                 }
                             }
+
+                            synchronized(playerList) {
+                                playerList.clear()
+                                playerList.addAll(tempPlayers)
+                            }
+                            statusMessage = "PID: $currentPid | GW: ${gWorldPtr != 0L} | Players: $count"
+                        } else {
+                            statusMessage = "WAITING FOR LIB..."
                         }
-                        statusMessage = "PID: $currentPid | GW: ${gWorldPtr != 0L} | Players: $count"
                     } else {
-                        statusMessage = "PID: $currentPid | WAITING FOR LIB..."
+                        statusMessage = "WAITING FOR PUBG..."
                     }
-                } else {
-                    statusMessage = "WAITING FOR PUBG..."
+                } catch (e: Exception) {
+                    statusMessage = "LOOP ERROR"
                 }
 
                 withContext(Dispatchers.Main) {
                     invalidate()
                 }
-                delay(25L)
+                delay(40L)
             }
         }
     }
@@ -118,7 +131,7 @@ class ESPView(context: Context) : View(context) {
                     val t = pt.y - 100f
                     val r = pt.x + 40f
                     val b = pt.y + 100f
-                    canvas.drawRect(l, t, r, b, enemyBoxPaint)
+                    canvas.drawRect(l, t, r, b, boxPaint)
                     canvas.drawText("Player", l, t - 8f, textPaint)
                 }
             }
@@ -127,7 +140,6 @@ class ESPView(context: Context) : View(context) {
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        isRunning = false
-        scope?.cancel()
+        toggleEsp(false)
     }
 }
