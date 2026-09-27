@@ -25,13 +25,13 @@ class ESPView(context: Context) : View(context) {
 
     private var scope: CoroutineScope? = null
     private var isRunning = false
-    private var statusMessage = "MUHGOUB ESP - 4.6.1 READY"
+    private var statusMessage = "MUHGOUB ESP - 4.6.1"
     private var currentPid = -1
     
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
-    // الأوفيسات المباشرة والصحيحة للنسخة 4.6.1
+    // الأوفيسات التي ثبت نجاحها في جلب GW: true
     private val GWORLD_BASE_OFFSET = 0xF624D40L
     private val VIEW_WORLD_OFFSET = 0xF5FBFD0L
     private val OFFSET_PERSISTENT_LEVEL = 0x30L
@@ -57,8 +57,10 @@ class ESPView(context: Context) : View(context) {
                         // 1. قراءة الـ ViewWorld Matrix
                         viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
 
-                        // 2. قراءة الـ GWorld مباشرة بالأوفيس الذي أعطى GW: true
-                        val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + GWORLD_BASE_OFFSET)
+                        // 2. المعادلة المؤكدة لـ GWorld (التي أعطت true سابقاً)
+                        val step1 = MemoryUtils.readLong(currentPid, libBase + GWORLD_BASE_OFFSET)
+                        val step2 = if (step1 != 0L) MemoryUtils.readLong(currentPid, step1 - 0x20L) else 0L
+                        val gWorldPtr = if (step2 != 0L) step2 + 0x30L else 0L
                         
                         var count = 0
                         synchronized(playerList) {
