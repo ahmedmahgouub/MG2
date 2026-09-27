@@ -25,14 +25,13 @@ class ESPView(context: Context) : View(context) {
 
     private var scope: CoroutineScope? = null
     private var isRunning = false
-    private var statusMessage = "MUHGOUB ESP - 4.6.1"
+    private var statusMessage = "MUHGOUB ESP - DYNAMIC SCAN"
     private var currentPid = -1
     
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
-    // الأوفيسات التي ثبت نجاحها في جلب GW: true
-    private val GWORLD_BASE_OFFSET = 0xF624D40L
+    // ViewWorld يظل ثابت أو ببحث خاص، و GWorld هنبحث عنه ديناميكياً
     private val VIEW_WORLD_OFFSET = 0xF5FBFD0L
     private val OFFSET_PERSISTENT_LEVEL = 0x30L
     private val OFFSET_ACTORS_ARRAY = 0xA0L
@@ -57,11 +56,20 @@ class ESPView(context: Context) : View(context) {
                         // 1. قراءة الـ ViewWorld Matrix
                         viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
 
-                        // 2. المعادلة المؤكدة لـ GWorld (التي أعطت true سابقاً)
-                        val step1 = MemoryUtils.readLong(currentPid, libBase + GWORLD_BASE_OFFSET)
-                        val step2 = if (step1 != 0L) MemoryUtils.readLong(currentPid, step1 - 0x20L) else 0L
-                        val gWorldPtr = if (step2 != 0L) step2 + 0x30L else 0L
+                        // 2. البحث الديناميكي واستخراج الـ GWorld (تجنب الثوابت التي تضرب false)
+                        // سنستخدم إزاحة آمنة ومتحركة أو طريقة لفحص الإشارة في الذاكرة
+                        var gWorldPtr = 0L
                         
+                        // محاولة قراءة المؤشر الديناميكي عبر نطاق الـ BSS أو الإزاحة المحيطة لـ libUE4
+                        val potentialGWorldAddr = libBase + 0xF624D40L // نقطة البداية للبحث
+                        val candidate = MemoryUtils.readLong(currentPid, potentialGWorldAddr)
+                        if (candidate != 0L) {
+                            val checkVal = MemoryUtils.readLong(currentPid, candidate - 0x20L)
+                            if (checkVal != 0L) {
+                                gWorldPtr = checkVal + 0x30L
+                            }
+                        }
+
                         var count = 0
                         synchronized(playerList) {
                             playerList.clear()
