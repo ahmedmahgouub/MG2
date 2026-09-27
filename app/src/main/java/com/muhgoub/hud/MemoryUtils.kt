@@ -7,7 +7,10 @@ import java.nio.ByteOrder
 
 object MemoryUtils {
 
-    // الأوفسيتات المحدثة والمستخرجة نهائياً بدقة
+    // متغير التحكم في وضع الكيرنال (True = وضع الكيرنال السريع / False = الوضع العادي)
+    var isKernelModeEnabled: Boolean = false
+
+    // الأوفسيتات الحقيقية والجديدة المستخرجة من التيرمينال حصرياً
     const val OFFSET_UWORLD: Long = 0x40D0C7F
     const val OFFSET_PROJECTION_MATRIX: Long = 0x4126140
     const val OFFSET_PERSISTENT_LEVEL: Long = 0x422C7C8
@@ -52,7 +55,11 @@ object MemoryUtils {
     data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
     data class Vector3(val x: Float, val y: Float, val z: Float)
 
+    // ================= قراءة الفلوت مع الدعم المزدوج (Kernel / Normal) =================
     fun readFloat(pid: Int, address: Long): Float {
+        if (isKernelModeEnabled) {
+            return KernelMemory.readFloat(pid, address)
+        }
         try {
             val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=4 2>/dev/null"
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
@@ -71,7 +78,11 @@ object MemoryUtils {
         return 0f
     }
 
+    // ================= قراءة اللونج مع الدعم المزدوج =================
     fun readLong(pid: Int, address: Long): Long {
+        if (isKernelModeEnabled) {
+            return KernelMemory.readLong(pid, address)
+        }
         try {
             val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=8 2>/dev/null"
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
@@ -90,7 +101,11 @@ object MemoryUtils {
         return 0L
     }
 
+    // ================= قراءة المتجهات مع الدعم المزدوج =================
     fun readVector3(pid: Int, address: Long): Vector3 {
+        if (isKernelModeEnabled) {
+            return KernelMemory.readVector3(pid, address)
+        }
         try {
             val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=12 2>/dev/null"
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
@@ -111,8 +126,12 @@ object MemoryUtils {
         return Vector3(0f, 0f, 0f)
     }
 
+    // ================= قراءة المصفوفة مع الدعم المزدوج =================
     fun readMatrix(pid: Int, address: Long): FloatArray {
         val matrix = FloatArray(16)
+        if (isKernelModeEnabled) {
+            return KernelMemory.readMatrix(pid, address)
+        }
         try {
             val byteCount = 16 * 4
             val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=$byteCount 2>/dev/null"
