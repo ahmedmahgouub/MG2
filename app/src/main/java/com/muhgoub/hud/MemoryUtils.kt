@@ -36,7 +36,6 @@ object MemoryUtils {
             val mapsFile = File("/proc/$pid/maps")
             if (!mapsFile.exists()) return 0L
             
-            // قراءة السطور بطريقة آمنة تماماً بدون lambdas أو return مشاكس
             val lines = mapsFile.readLines()
             for (line in lines) {
                 if (line.contains(moduleName) && line.contains("r-xp")) {
