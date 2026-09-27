@@ -31,10 +31,10 @@ class ESPView(context: Context) : View(context) {
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
 
-    // العناوين الجديدة المستخرجة من سكريبت التليجرام الثاني
-    private val GWORLD_BASE_OFFSET = 0xE6D36F0L // معتمد على GUObject / GWorld المقابل
-    private val VIEW_WORLD_OFFSET = 0xE6D63E0L  // Vworld_Offsets الدقيق
-    private val OFFSET_ACTORS_ARRAY = 0xA0L     // Actors_Offset المؤكدة
+    // العناوين المحدثة بالكامل حسب آخر سكريبت وقائمة تم اعتمادها
+    private val GWORLD_BASE_OFFSET = 0xF3B85F8L
+    private val VIEW_WORLD_OFFSET = 0xE6D63E0L
+    private val OFFSET_ACTORS_ARRAY = 0xA0L
 
     init {
         startLoop()
@@ -55,7 +55,7 @@ class ESPView(context: Context) : View(context) {
                         // 1. قراءة الـ ViewWorld Matrix بالعنوان الجديد
                         viewMatrix = MemoryUtils.readMatrix(currentPid, libBase + VIEW_WORLD_OFFSET)
 
-                        // 2. تطبيق معادلة GWorld الجديدة للوصول السليم
+                        // 2. تطبيق معادلة GWorld الدقيقة: (Base - 0x20) + 0x30
                         val step1 = MemoryUtils.readLong(currentPid, libBase + GWORLD_BASE_OFFSET)
                         val step2 = if (step1 != 0L) MemoryUtils.readLong(currentPid, step1 - 0x20L) else 0L
                         val gWorldPtr = if (step2 != 0L) step2 + 0x30L else 0L
