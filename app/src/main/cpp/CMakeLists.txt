@@ -1,56 +1,21 @@
-plugins {
-    id 'com.android.application'
-    id 'org.jetbrains.kotlin.android'
-}
+cmake_minimum_required(VERSION 3.10.2)
 
-android {
-    namespace 'com.muhgoub.hud'
-    compileSdk 34
+project("hud_internal")
 
-    defaultConfig {
-        applicationId "com.muhgoub.hud"
-        minSdk 26
-        targetSdk 34
-        versionCode 1
-        versionName "1.0"
+set(CMAKE_CURRENT_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR})
 
-        // 1️⃣ تم إضافة معمارية الـ 64 بت المتوافقة مع اللعبة لمنع التضارب
-        ndk {
-            abiFilters "arm64-v8a"
-        }
-    }
+add_library(
+    hud_internal
+    SHARED
+    "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
+)
 
-    // 2️⃣ تم ربط ملف الـ CMakeLists الداخلي لبناء مكتبة الـ C++ تلقائياً
-    externalNativeBuild {
-        cmake {
-            path "src/main/cpp/CMakeLists.txt"
-        }
-    }
+find_library(
+    log-lib
+    log
+)
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
-    }
-
-    kotlinOptions {
-        jvmTarget = '17'
-    }
-
-    buildFeatures {
-        viewBinding true
-    }
-}
-
-dependencies {
-    implementation 'androidx.core:core-ktx:1.13.1'
-    implementation 'androidx.appcompat:appcompat:1.7.0'
-    implementation 'com.google.android.material:material:1.12.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-}
+target_link_libraries(
+    hud_internal
+    ${log-lib}
+)
