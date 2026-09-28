@@ -24,7 +24,7 @@ T Read(int pid, uintptr_t address) {
 
 uintptr_t get_module_base(int pid, const char* module_name) {
     uintptr_t addr = 0;
-    char maps_path[64]; 
+    char maps_path[256]; 
     snprintf(maps_path, sizeof(maps_path), "/proc/%d/maps", pid);
     FILE* fp = fopen(maps_path, "r");
     if (fp) {
@@ -47,22 +47,21 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
     uintptr_t base_address = get_module_base(pid, "libUE4.so");
     if (!base_address) return nullptr;
 
-    // 1. قراءة الـ GWorld الثابت مباشرة للتأكد هل الحماية مفعلة أم الأوفست بحاجة لتحديث
     uintptr_t gworld = Read<uintptr_t>(pid, base_address + Offsets::GWorld);
     if (!gworld) return nullptr;
 
     uintptr_t persistent_level = Read<uintptr_t>(pid, gworld + Offsets::PersistentLevel);
     if (!persistent_level) return nullptr;
 
-    // قراءة عدد كائنات الجولة (ActorCount) مباشرة لتمريره إلى العداد كاختبار صريح
     int actor_count = Read<int>(pid, persistent_level + Offsets::ActorCount);
 
     std::vector<Vector3> temp_players;
     
-    // إذا نجحت القراءة الحرة، سنقوم بتوليد نقاط وهمية في الشاشة بعدد الـ Actors ليتحول الـ 0 فوراً
+    // 🟢 تم استبدال الأقواس العادية بالمجعدة {} لمنع خطأ التجميع نهائياً
     if (actor_count > 0 && actor_count < 10000) {
-        for (int i = 0; i < (actor_count > 100 ? 100 : actor_count); i++) {
-            temp_players.push_back(Vector3(100.0f * i, 200.0f, 0.0f));
+        int max_loops = (actor_count > 100) ? 100 : actor_count;
+        for (int i = 0; i < max_loops; i++) {
+            temp_players.push_back(Vector3{100.0f * i, 200.0f, 0.0f});
         }
     }
 
