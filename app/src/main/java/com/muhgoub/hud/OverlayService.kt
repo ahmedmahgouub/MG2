@@ -46,7 +46,7 @@ class OverlayService : Service() {
 
     private var bubbleView: View? = null
     private var panelView: View? = null
-    private var espView: ESPView? = null // طبقة الرسم الجديدة الخاصة بالكاشف
+    private var espView: ESPView? = null 
     
     private var bubbleParams: WindowManager.LayoutParams? = null
     private var panelParams: WindowManager.LayoutParams? = null
@@ -62,7 +62,7 @@ class OverlayService : Service() {
 
         addBubbleView()
         addPanelView()
-        addEspView() // إضافة طبقة الكاشف للشاشة
+        addEspView()
 
         applyCoreAlign(prefs.getCoreAlign())
         setPanelVisible(prefs.isOverlayExpanded())
@@ -78,7 +78,7 @@ class OverlayService : Service() {
     override fun onDestroy() {
         bubbleView?.let { runCatching { windowManager.removeView(it) } }
         panelView?.let { runCatching { windowManager.removeView(it) } }
-        espView?.let { runCatching { windowManager.removeView(it) } } // إزالة طبقة الكاشف عند الإيقاف
+        espView?.let { runCatching { windowManager.removeView(it) } }
         super.onDestroy()
     }
 
@@ -128,7 +128,6 @@ class OverlayService : Service() {
         bubbleParams = params
     }
 
-    // دالة إنشاء وإضافة طبقة الكاشف (ESPView) الشفافة فوق اللعبة
     private fun addEspView() {
         espView = ESPView(this)
         val params = WindowManager.LayoutParams(
