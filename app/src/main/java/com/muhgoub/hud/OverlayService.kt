@@ -166,21 +166,19 @@ class OverlayService : Service() {
                         if (baseAddr != 0L) {
                             val uWorldAddr = baseAddr + MemoryUtils.OFFSET_UWORLD
                             val uWorld = MemoryUtils.readLong(pid, uWorldAddr)
-                            val isGwTrue = uWorld != 0L
                             
-                            mainHandler.post {
-                                espView?.invalidate()
-                            }
-                        } else {
-                            mainHandler.post {
-                                espView?.invalidate()
+                            if (uWorld != 0L) {
+                                val matrixAddr = baseAddr + MemoryUtils.OFFSET_PROJECTION_MATRIX
+                                val matrix = MemoryUtils.readMatrix(pid, matrixAddr)
+                                
+                                espView?.updateGameData(pid, baseAddr, uWorld, matrix)
                             }
                         }
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
-                Thread.sleep(100)
+                Thread.sleep(16)
             }
         }
     }
