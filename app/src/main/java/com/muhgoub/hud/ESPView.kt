@@ -18,11 +18,10 @@ class ESPView(context: Context) : View(context) {
     private var screenWidth = 0
     private var screenHeight = 0
     
-    // متغيرات البيانات الحقيقية
     private var currentPid = -1
     private var currentBaseAddr = 0L
     private var currentUWorld = 0L
-    private var viewMatrix: FloatArray = FloatArray(16)
+    private var playerCount = 0
     var isPlayerCountEnabled: Boolean = true
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -31,11 +30,11 @@ class ESPView(context: Context) : View(context) {
         screenHeight = h
     }
 
-    fun updateGameData(pid: Int, baseAddr: Long, uWorld: Long, matrix: FloatArray) {
+    fun updateGameData(pid: Int, baseAddr: Long, uWorld: Long, count: Int) {
         this.currentPid = pid
         this.currentBaseAddr = baseAddr
         this.currentUWorld = uWorld
-        this.viewMatrix = matrix
+        this.playerCount = count
         invalidate()
     }
 
@@ -45,12 +44,8 @@ class ESPView(context: Context) : View(context) {
         if (screenWidth == 0 || screenHeight == 0) return
 
         if (isPlayerCountEnabled) {
-            // التحقق الحقيقي من الـ GW (لو الـ uWorld مش صفر يبيبقى true)
             val isGwTrue = currentUWorld != 0L
-            
-            // النص الحقيقي الذي طلبت ظهوره تماماً
-            val statusText = "PID: $currentPid | GW: $isGwTrue | Players: 0"
-            
+            val statusText = "PID: $currentPid | GW: $isGwTrue | Players: $playerCount"
             canvas.drawText(statusText, 50f, 100f, textPaint)
         }
     }
