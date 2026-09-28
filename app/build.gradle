@@ -14,13 +14,11 @@ android {
         versionCode 1
         versionName "1.0"
 
-        // 1️⃣ تم إضافة معمارية الـ 64 بت المتوافقة مع اللعبة لمنع التضارب
         ndk {
             abiFilters "arm64-v8a"
         }
     }
 
-    // 2️⃣ تم ربط ملف الـ CMakeLists الداخلي لبناء مكتبة الـ C++ تلقائياً
     externalNativeBuild {
         cmake {
             path "src/main/cpp/CMakeLists.txt"
