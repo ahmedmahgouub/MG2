@@ -72,13 +72,13 @@ class ESPView @JvmOverloads constructor(
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        // قراءة مصفوفة الإسقاط باستخدام الأوفسيت المستخرج من التيرماكس
+                        // قراءة مصفوفة الإسقاط باستخدام الأوفسيت
                         val tempMatrix = MemoryUtils.readMatrix(currentPid, libBase + MemoryUtils.OFFSET_PROJECTION_MATRIX)
                         if (tempMatrix[0] != 0f) {
                             viewMatrix = tempMatrix
                         }
                         
-                        // قراءة UWorld مع التحقق من صحته وتثبيته لمنع تذبذب الـ true/false
+                        // قراءة UWorld مع التحقق من صحته وتثبيته لمنع التذبذب
                         val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + MemoryUtils.OFFSET_UWORLD)
                         if (gWorldPtr != 0L && gWorldPtr > 0x10000000L) {
                             cachedGWorld = gWorldPtr
@@ -88,22 +88,22 @@ class ESPView @JvmOverloads constructor(
                         val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
 
                         if (cachedGWorld != 0L && cachedGWorld > 0x10000000L) {
-                            // قراءة PersistentLevel باستخدام الأوفسيت المستخرج من التيرماكس
+                            // قراءة PersistentLevel باستخدام الأوفسيت
                             val persistentLevel = MemoryUtils.readLong(currentPid, cachedGWorld + MemoryUtils.OFFSET_PERSISTENT_LEVEL)
                             if (persistentLevel != 0L && persistentLevel > 0x10000000L) {
-                                val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + 0x98L)
-                                val actorsCount = MemoryUtils.readLong(currentPid, persistentLevel + 0xA0L).toInt()
+                                val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + MemoryUtils.OFFSET_ACTORS)
+                                val actorsCount = MemoryUtils.readLong(currentPid, persistentLevel + MemoryUtils.OFFSET_ACTORS_COUNT).toInt()
                                 
                                 if (actorsPtr != 0L && actorsCount in 1..10000) {
                                     val maxCount = minOf(actorsCount, 800)
                                     for (i in 0 until maxCount) {
                                         val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L))
                                         if (actor != 0L && actor > 0x10000000L) {
-                                            val rootComponent = MemoryUtils.readLong(currentPid, actor + 0x208L)
+                                            val rootComponent = MemoryUtils.readLong(currentPid, actor + MemoryUtils.OFFSET_ROOT_COMPONENT)
                                             if (rootComponent != 0L && rootComponent > 0x10000000L) {
-                                                val x = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E4L)
-                                                val y = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E8L)
-                                                val z = MemoryUtils.readFloat(currentPid, rootComponent + 0x1ECL)
+                                                val x = MemoryUtils.readFloat(currentPid, rootComponent + MemoryUtils.OFFSET_RELATIVE_LOCATION)
+                                                val y = MemoryUtils.readFloat(currentPid, rootComponent + MemoryUtils.OFFSET_RELATIVE_LOCATION + 4L)
+                                                val z = MemoryUtils.readFloat(currentPid, rootComponent + MemoryUtils.OFFSET_RELATIVE_LOCATION + 8L)
                                                 
                                                 if (x != 0f && y != 0f) {
                                                     tempPlayers.add(MemoryUtils.Vector3(x, y, z))
