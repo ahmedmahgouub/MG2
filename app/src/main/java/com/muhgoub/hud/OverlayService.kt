@@ -167,7 +167,7 @@ class OverlayService : Service() {
                             val uWorldAddr = baseAddr + MemoryUtils.OFFSET_UWORLD
                             val uWorld = KernelMemory.readLong(pid, uWorldAddr)
                             
-                            val activePlayers = if (uWorld != 0L) 0 else 0 
+                            val activePlayers = 0 
                             
                             espView?.updateGameData(pid, baseAddr, uWorld, activePlayers)
                         } else {
@@ -333,8 +333,6 @@ class OverlayService : Service() {
             WindowManager.LayoutParams.TYPE_PHONE
         }
     }
-
-    private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
 
     private fun cmToPx(cm: Float): Int =
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_MM, cm * 10f, resources.displayMetrics).toInt()
