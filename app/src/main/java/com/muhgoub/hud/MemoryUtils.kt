@@ -10,13 +10,26 @@ object MemoryUtils {
     // متغير التحكم في وضع الكيرنال (True = وضع الكيرنال السريع / False = الوضع العادي)
     var isKernelModeEnabled: Boolean = false
 
-    // الأوفسيتات الحقيقية والجديدة المستخرجة من التيرمينال حصرياً
-    const val OFFSET_UWORLD: Long = 0x40D0C7F
-    const val OFFSET_PROJECTION_MATRIX: Long = 0x4126140
-    const val OFFSET_PERSISTENT_LEVEL: Long = 0x422C7C8
-    const val OFFSET_PLAYER_CONTROLLER: Long = 0x3FC17C0
-    const val OFFSET_PAWN_VELOCITY: Long = 0x40DDAD3
-    const val OFFSET_PLAYER_INDEX: Long = 0x412FEA8
+    // الأوفسيتات الحقيقية والجديدة المستخرجة من التيرمينال وتحديث اللعبة الأخير
+    const val OFFSET_UWORLD: Long = 0x98E23A0L          // تم التحديث إلى GWorld الحقيقي
+    const val OFFSET_PROJECTION_MATRIX: Long = 0xC400000L // UE4Pointer Base / Matrix
+    const val OFFSET_PERSISTENT_LEVEL: Long = 0x38L     // GameInstance / LocalPlayers Base
+    const val OFFSET_PLAYER_CONTROLLER: Long = 0x30L    // PlayerController Offset
+    const val OFFSET_PAWN_VELOCITY: Long = 0x330L       // AcknowledgedPawn
+    const val OFFSET_PLAYER_INDEX: Long = 0x120L        // TeamIndex
+
+    // الأوفستات الإضافية الأساسية للـ Entity والهيكل والشصي
+    const val OFFSET_GNAME: Long = 0x981C5C0L
+    const val OFFSET_MESH: Long = 0x310L
+    const val OFFSET_ROOT_COMPONENT: Long = 0x150L
+    const val OFFSET_COMPONENT_TO_WORLD: Long = 0x240L
+    const val OFFSET_BONE_ARRAY: Long = 0x5a0L
+    const val OFFSET_HEALTH: Long = 0x118cL
+    const val OFFSET_MAX_HEALTH: Long = 0x1190L
+    const val OFFSET_ACTOR_BOX: Long = 0x140L
+    const val OFFSET_CURRENT_WEAPON: Long = 0x2B8L
+    const val OFFSET_PLAYER_NAME: Long = 0x308L
+    const val OFFSET_GRENADE_WARNING: Long = 0x1E0L
 
     fun findProcessId(packageName: String): Int {
         var pid = -1
