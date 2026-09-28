@@ -26,7 +26,6 @@ class ESPView @JvmOverloads constructor(
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
     private var statusMessage = "WAITING FOR PUBG..."
-    private var cachedGWorld: Long = 0L
 
     private val textPaint = Paint().apply {
         color = android.graphics.Color.GREEN
@@ -70,47 +69,18 @@ class ESPView @JvmOverloads constructor(
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        // قراءة مصفوفة الإسقاط (ViewWorld)
+                        // 1. قراءة مصفوفة الإسقاط (المصفوفة سيتم سحبها للـ C++ بالكامل في التحديث القادم)
                         val tempMatrix = MemoryUtils.readMatrix(currentPid, libBase + MemoryUtils.OFFSET_VIEW_WORLD)
-                        if (tempMatrix[0] != 0f) {
+                        if (tempMatrix.isNotEmpty() && tempMatrix[0] != 0f) {
                             viewMatrix = tempMatrix
                         }
                         
-                        // قراءة GWorld المباشر
-                        val world = MemoryUtils.readLong(currentPid, libBase + MemoryUtils.OFFSET_GWORLD)
-                        if (world != 0L && world > 0x10000000L) {
-                            cachedGWorld = world
-                        }
-                        
-                        var count = 0
+                        // 2. استدعاء محرك الـ C++ فائق السرعة لجلب إحداثيات اللاعبين دفعة واحدة وبدون لاج
+                        val nativePlayers = MemoryUtils.getPlayersLocations(currentPid)
                         val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
 
-                        if (cachedGWorld != 0L && cachedGWorld > 0x10000000L) {
-                            val persistentLevel = MemoryUtils.readLong(currentPid, cachedGWorld + MemoryUtils.OFFSET_PERSISTENT_LEVEL)
-                            if (persistentLevel != 0L && persistentLevel > 0x10000000L) {
-                                val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + MemoryUtils.OFFSET_ACTOR_ARRAY)
-                                val actorsCount = MemoryUtils.readLong(currentPid, persistentLevel + MemoryUtils.OFFSET_ACTOR_COUNT).toInt()
-                                
-                                if (actorsPtr != 0L && actorsCount in 1..10000) {
-                                    val maxCount = minOf(actorsCount, 800)
-                                    for (i in 0 until maxCount) {
-                                        val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L))
-                                        if (actor != 0L && actor > 0x10000000L) {
-                                            val rootComponent = MemoryUtils.readLong(currentPid, actor + MemoryUtils.OFFSET_ROOT_COMPONENT)
-                                            if (rootComponent != 0L && rootComponent > 0x10000000L) {
-                                                val x = MemoryUtils.readFloat(currentPid, rootComponent + MemoryUtils.OFFSET_RELATIVE_LOCATION)
-                                                val y = MemoryUtils.readFloat(currentPid, rootComponent + MemoryUtils.OFFSET_RELATIVE_LOCATION + 4L)
-                                                val z = MemoryUtils.readFloat(currentPid, rootComponent + MemoryUtils.OFFSET_RELATIVE_LOCATION + 8L)
-                                                
-                                                if (x != 0f && y != 0f) {
-                                                    tempPlayers.add(MemoryUtils.Vector3(x, y, z))
-                                                    count++
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                        if (nativePlayers != null) {
+                            tempPlayers.addAll(nativePlayers)
                         }
 
                         synchronized(playerList) {
@@ -118,8 +88,7 @@ class ESPView @JvmOverloads constructor(
                             playerList.addAll(tempPlayers)
                         }
                         
-                        val isGWValid = (cachedGWorld != 0L && cachedGWorld > 0x10000000L)
-                        statusMessage = "PID: $currentPid | GW: $isGWValid | Players: $count"
+                        statusMessage = "PID: $currentPid | Engine: C++ Active | Players: ${tempPlayers.size}"
                     } else {
                         statusMessage = "PID: $currentPid | WAITING FOR LIB..."
                     }
@@ -139,11 +108,11 @@ class ESPView @JvmOverloads constructor(
         isRunning = false
         scope?.cancel()
         scope = null
-        cachedGWorld = 0L
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        // رسم شريط الحالة فوق على الشمال باللون الأخضر
         canvas.drawText(statusMessage, 30f, 120f, textPaint)
 
         synchronized(playerList) {
