@@ -13,7 +13,7 @@ object MemoryUtils {
     const val GNames_Offset: Long       = 0x89750B0L
     const val ProcessEvent_Offset: Long = 0xA264CD4L
 
-    // الأوفسيتات الهرمية المحدثة للربط السلسلي (Pointer Chaining)
+    // الأوفسيتات الهرمية المحدثة للربط السلسلي (Pointer Chaining) وإسقاط الشاشة
     const val OFFSET_GAME_INSTANCE: Long = 0x928
     const val OFFSET_LOCAL_PLAYERS: Long = 0x38
     const val OFFSET_VIEWPORT_CLIENT: Long = 0x70
@@ -21,6 +21,7 @@ object MemoryUtils {
     const val OFFSET_PERSISTENT_LEVEL: Long = 0x30
     const val OFFSET_ACTOR_ARRAY: Long = 0x98
     const val OFFSET_ACTOR_COUNT: Long =  0xA0
+    const val OFFSET_PROJECTION_MATRIX: Long = 0x1A0 // تم إضافته لربط مصفوفة الإسقاط بنجاح
 
     fun findProcessId(packageName: String): Int {
         var pid = -1
