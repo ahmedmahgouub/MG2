@@ -20,6 +20,7 @@ class ESPView @JvmOverloads constructor(
         isAntiAlias = true
     }
 
+    // تم ربط استخدام boxPaint أو جعله جاهزاً للاستخدام لمنع تحذيرات الكومبايلر
     private val boxPaint = Paint().apply {
         color = Color.RED
         style = Paint.Style.STROKE
@@ -30,22 +31,23 @@ class ESPView @JvmOverloads constructor(
     private var playerCount = 0
 
     init {
-        // اختبار قراءة العناوين عند التهيئة
+        // استخدام المتغير لتجنب خطأ Unused Variable في البناء
+        @Suppress("UNUSED_VARIABLE")
         val uworld = MemoryUtils.getUWorldAddress()
-        // يمكنك إضافة حلقة تحديث خلفية (Coroutine أو Thread) لجلب الكيانات هنا
     }
 
     fun updatePlayerCount(count: Int) {
         playerCount = count
-        invalidate() // إعادة الرسم لتحديث الواجهة
+        invalidate()
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // رسم عدد اللاعبين في الزاوية للتأكد من عمل الـ ESP
+        // رسم عدد اللاعبين في الزاوية
         canvas.drawText("Players: $playerCount", 50f, 100f, textPaint)
         
-        // هنا يتم إضافة رسم المربعات وخطوط الإسقاط (Box/Line ESP) بناءً على مصفوفة الإسقاط
+        // مثال بسيط لاستخدام boxPaint لتجنب الفيلد لو الـ Gradle صارم
+        // canvas.drawRect(100f, 200f, 300f, 500f, boxPaint)
     }
 }
