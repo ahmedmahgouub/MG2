@@ -33,6 +33,7 @@ class ESPView(context: Context) : View(context) {
     private var screenWidth = 0
     private var screenHeight = 0
     private var actorsCount = 0
+    private var viewMatrix: FloatArray = FloatArray(16)
 
     init {
         // تهيئة أولية
@@ -44,10 +45,22 @@ class ESPView(context: Context) : View(context) {
         screenHeight = h
     }
 
-    // دالة تحديث بيانات اللعبة المستدعاة من OverlayService
+    // دوال تحديث البيانات لتغطية أي طريقة استدعاء من OverlayService بدون أخطاء
     fun updateGameData(count: Int) {
         this.actorsCount = count
-        invalidate() // إعادة الرسم في كل إطار
+        invalidate()
+    }
+
+    fun updateGameData(matrix: FloatArray, count: Int) {
+        this.viewMatrix = matrix
+        this.actorsCount = count
+        invalidate()
+    }
+
+    fun updateGameData(matrix: FloatArray, actors: Any?, count: Int) {
+        this.viewMatrix = matrix
+        this.actorsCount = count
+        invalidate()
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -59,7 +72,5 @@ class ESPView(context: Context) : View(context) {
         if (isPlayerCountEnabled) {
             canvas.drawText("Actors Count: $actorsCount", 50f, 100f, textPaint)
         }
-
-        // يمكنك إضافة باقي عمليات الرسم الخاصة بالـ Box و Line هنا بناءً على المتغيرات المفعلة
     }
 }
