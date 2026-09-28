@@ -12,6 +12,8 @@ namespace Offsets {
 
     // ---- [ أوفستات الهيكل البنائي للمحرك الأساسي ] ----
     constexpr uintptr_t PersistentLevel = 0x30;
+    constexpr uintptr_t ActorArray = 0xA0; // 🟢 تم التثبيت للـ 64 بت لمنع أخطاء التجميع
+    constexpr uintptr_t ActorCount = 0xA8; // 🟢 تم التثبيت للـ 64 بت لمنع أخطاء التجميع
     constexpr uintptr_t NetDriver = 0x38;
     constexpr uintptr_t ServerConnection = 0x78;
     constexpr uintptr_t PlayerController = 0x30;
