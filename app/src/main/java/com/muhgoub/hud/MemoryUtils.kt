@@ -10,15 +10,19 @@ object MemoryUtils {
     // متغير التحكم في وضع الكيرنال (True = وضع الكيرنال السريع / False = الوضع العادي)
     var isKernelModeEnabled: Boolean = false
 
-    // الأوفسيتات الحقيقية والجديدة المستخرجة من التيرمينال وتحديث اللعبة الأخير
-    const val OFFSET_UWORLD: Long = 0x98E23A0L          // تم التحديث إلى GWorld الحقيقي
-    const val OFFSET_PROJECTION_MATRIX: Long = 0xC400000L // UE4Pointer Base / Matrix
-    const val OFFSET_PERSISTENT_LEVEL: Long = 0x38L     // GameInstance / LocalPlayers Base
-    const val OFFSET_PLAYER_CONTROLLER: Long = 0x30L    // PlayerController Offset
-    const val OFFSET_PAWN_VELOCITY: Long = 0x330L       // AcknowledgedPawn
-    const val OFFSET_PLAYER_INDEX: Long = 0x120L        // TeamIndex
+    // الأوفسيتات الأساسية والمحدثة للعبة
+    const val OFFSET_UWORLD: Long = 0x98E23A0L         // GWorld الحقيقي
+    const val OFFSET_PROJECTION_MATRIX: Long = 0xC400000L // Matrix / Projection Base
+    const val OFFSET_PERSISTENT_LEVEL: Long = 0x38L      // Persistent Level
+    const val OFFSET_PLAYER_CONTROLLER: Long = 0x30L     // PlayerController Offset
+    const val OFFSET_PAWN_VELOCITY: Long = 0x330L        // AcknowledgedPawn
+    const val OFFSET_PLAYER_INDEX: Long = 0x120L         // TeamIndex
 
-    // الأوفستات الإضافية الأساسية للـ Entity والهيكل والشصي
+    // الأوفستات الإضافية للـ Actors و Level
+    const val OFFSET_ACTORS: Long = 0x98L                // مؤشر قائمة الأكتورس داخل الـ Level
+    const val OFFSET_ACTORS_COUNT: Long = 0xA0L          // عدد الأكتورس الكلي
+
+    // الأوفستات الخاصة بالـ Entity والهيكل والشصي
     const val OFFSET_GNAME: Long = 0x981C5C0L
     const val OFFSET_MESH: Long = 0x310L
     const val OFFSET_ROOT_COMPONENT: Long = 0x150L
@@ -30,6 +34,7 @@ object MemoryUtils {
     const val OFFSET_CURRENT_WEAPON: Long = 0x2B8L
     const val OFFSET_PLAYER_NAME: Long = 0x308L
     const val OFFSET_GRENADE_WARNING: Long = 0x1E0L
+    const val OFFSET_RELATIVE_LOCATION: Long = 0x1E4L    // إحداثيات الموقع (X, Y, Z) للـ RootComponent
 
     fun findProcessId(packageName: String): Int {
         var pid = -1
