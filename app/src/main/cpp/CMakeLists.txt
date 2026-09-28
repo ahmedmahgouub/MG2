@@ -1,20 +1,22 @@
 cmake_minimum_required(VERSION 3.10.2)
 
+# اسم المكتبة الداخلية للمشروع
 project("hud_internal")
 
-set(CMAKE_CURRENT_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR})
-
+# ربط ملفات الكود مباشرة بدون علامات اقتباس معقدة مسببة للخطأ
 add_library(
     hud_internal
     SHARED
-    "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
+    main.cpp
 )
 
+# البحث عن مكتبة الـ Log الخاصة بالأندرويد
 find_library(
     log-lib
     log
 )
 
+# دمج المكتبات معاً لضمان البناء المستقر بنجاح
 target_link_libraries(
     hud_internal
     ${log-lib}
