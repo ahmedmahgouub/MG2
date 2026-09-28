@@ -72,27 +72,36 @@ class ESPView @JvmOverloads constructor(
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        // قراءة مصفوفة الإسقاط باستخدام الأوفسيت المستخرج من التيرماكس
+                        // 1. قراءة GEngine باستخدام الأركان الأربعة الجديدة
+                        val gEngine = MemoryUtils.readLong(currentPid, libBase + MemoryUtils.GEngine_Offset)
+                        
+                        if (gEngine != 0L && gEngine > 0x10000000L) {
+                            // 2. تتبع سلسلة المؤشرات (Pointer Chaining) من GEngine للوصول إلى الـ World والـ Viewport
+                            val gameInstance = MemoryUtils.readLong(currentPid, gEngine + MemoryUtils.OFFSET_GAME_INSTANCE)
+                            val localPlayers = MemoryUtils.readLong(currentPid, gameInstance + MemoryUtils.OFFSET_LOCAL_PLAYERS)
+                            val localPlayer = MemoryUtils.readLong(currentPid, localPlayers)
+                            val viewportClient = MemoryUtils.readLong(currentPid, localPlayer + MemoryUtils.OFFSET_VIEWPORT_CLIENT)
+                            val gWorldPtr = MemoryUtils.readLong(currentPid, viewportClient + MemoryUtils.OFFSET_WORLD)
+                            
+                            if (gWorldPtr != 0L && gWorldPtr > 0x10000000L) {
+                                cachedGWorld = gWorldPtr
+                            }
+                        }
+
+                        // محاولة جلب مصفوفة الإسقاط وتحديثها
                         val tempMatrix = MemoryUtils.readMatrix(currentPid, libBase + MemoryUtils.OFFSET_PROJECTION_MATRIX)
                         if (tempMatrix[0] != 0f) {
                             viewMatrix = tempMatrix
-                        }
-                        
-                        // قراءة UWorld مع التحقق من صحته وتثبيته لمنع تذبذب الـ true/false
-                        val gWorldPtr = MemoryUtils.readLong(currentPid, libBase + MemoryUtils.OFFSET_UWORLD)
-                        if (gWorldPtr != 0L && gWorldPtr > 0x10000000L) {
-                            cachedGWorld = gWorldPtr
                         }
                         
                         var count = 0
                         val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
 
                         if (cachedGWorld != 0L && cachedGWorld > 0x10000000L) {
-                            // قراءة PersistentLevel باستخدام الأوفسيت المستخرج من التيرماكس
                             val persistentLevel = MemoryUtils.readLong(currentPid, cachedGWorld + MemoryUtils.OFFSET_PERSISTENT_LEVEL)
                             if (persistentLevel != 0L && persistentLevel > 0x10000000L) {
-                                val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + 0x98L)
-                                val actorsCount = MemoryUtils.readLong(currentPid, persistentLevel + 0xA0L).toInt()
+                                val actorsPtr = MemoryUtils.readLong(currentPid, persistentLevel + MemoryUtils.OFFSET_ACTOR_ARRAY)
+                                val actorsCount = MemoryUtils.readLong(currentPid, persistentLevel + MemoryUtils.OFFSET_ACTOR_COUNT).toInt()
                                 
                                 if (actorsPtr != 0L && actorsCount in 1..10000) {
                                     val maxCount = minOf(actorsCount, 800)
