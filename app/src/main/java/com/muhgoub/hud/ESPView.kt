@@ -69,13 +69,13 @@ class ESPView @JvmOverloads constructor(
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        // 1. قراءة مصفوفة الإسقاط (المصفوفة سيتم سحبها للـ C++ بالكامل في التحديث القادم)
+                        // 1. قراءة مصفوفة الإسقاط وتأمين الشرط هندسياً لمنع خطأ البناء الأحمر
                         val tempMatrix = MemoryUtils.readMatrix(currentPid, libBase + MemoryUtils.OFFSET_VIEW_WORLD)
                         if (tempMatrix.isNotEmpty() && tempMatrix[0] != 0f) {
                             viewMatrix = tempMatrix
                         }
                         
-                        // 2. استدعاء محرك الـ C++ فائق السرعة لجلب إحداثيات اللاعبين دفعة واحدة وبدون لاج
+                        // 2. استدعاء محرك الاختبار المباشر من الـ C++
                         val nativePlayers = MemoryUtils.getPlayersLocations(currentPid)
                         val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
 
@@ -112,7 +112,6 @@ class ESPView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        // رسم شريط الحالة فوق على الشمال باللون الأخضر
         canvas.drawText(statusMessage, 30f, 120f, textPaint)
 
         synchronized(playerList) {
