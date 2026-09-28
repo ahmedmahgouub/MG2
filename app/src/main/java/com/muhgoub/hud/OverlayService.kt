@@ -167,13 +167,16 @@ class OverlayService : Service() {
                             val uWorldAddr = baseAddr + MemoryUtils.OFFSET_UWORLD
                             val uWorld = MemoryUtils.readLong(pid, uWorldAddr)
                             
-                            if (uWorld != 0L) {
-                                val matrixAddr = baseAddr + MemoryUtils.OFFSET_PROJECTION_MATRIX
-                                val matrix = MemoryUtils.readMatrix(pid, matrixAddr)
-                                
-                                espView?.updateGameData(pid, baseAddr, uWorld, matrix)
-                            }
+                            val matrixAddr = baseAddr + MemoryUtils.OFFSET_PROJECTION_MATRIX
+                            val matrix = MemoryUtils.readMatrix(pid, matrixAddr)
+                            
+                            // إرسال البيانات المحدثة لطبقة الرسم (تحديث الـ PID والـ GW وحالة اللعبة)
+                            espView?.updateGameData(pid, baseAddr, uWorld, matrix)
+                        } else {
+                            espView?.updateGameData(pid, 0L, 0L, FloatArray(16))
                         }
+                    } else {
+                        espView?.updateGameData(-1, 0L, 0L, FloatArray(16))
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
