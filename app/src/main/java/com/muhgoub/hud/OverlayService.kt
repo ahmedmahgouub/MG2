@@ -165,23 +165,21 @@ class OverlayService : Service() {
                         val baseAddr = MemoryUtils.getModuleBase(pid, "libUE4.so")
                         if (baseAddr != 0L) {
                             val uWorldAddr = baseAddr + MemoryUtils.OFFSET_UWORLD
-                            val uWorld = MemoryUtils.readLong(pid, uWorldAddr)
+                            val uWorld = KernelMemory.readLong(pid, uWorldAddr)
                             
-                            val matrixAddr = baseAddr + MemoryUtils.OFFSET_PROJECTION_MATRIX
-                            val matrix = MemoryUtils.readMatrix(pid, matrixAddr)
+                            val activePlayers = if (uWorld != 0L) 0 else 0 
                             
-                            // إرسال البيانات المحدثة لطبقة الرسم (تحديث الـ PID والـ GW وحالة اللعبة)
-                            espView?.updateGameData(pid, baseAddr, uWorld, matrix)
+                            espView?.updateGameData(pid, baseAddr, uWorld, activePlayers)
                         } else {
-                            espView?.updateGameData(pid, 0L, 0L, FloatArray(16))
+                            espView?.updateGameData(pid, 0L, 0L, 0)
                         }
                     } else {
-                        espView?.updateGameData(-1, 0L, 0L, FloatArray(16))
+                        espView?.updateGameData(-1, 0L, 0L, 0)
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
-                Thread.sleep(16)
+                Thread.sleep(100)
             }
         }
     }
