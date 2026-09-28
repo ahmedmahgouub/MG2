@@ -46,13 +46,12 @@ class OverlayService : Service() {
 
     private var bubbleView: View? = null
     private var panelView: View? = null
-    private var espView: ESPView? = null
+    private var espView: ESPView? = null // طبقة الرسم الجديدة الخاصة بالكاشف
     
     private var bubbleParams: WindowManager.LayoutParams? = null
     private var panelParams: WindowManager.LayoutParams? = null
 
     private val toggleButtons = arrayOfNulls<Button>(12)
-    private var isRunning = true
 
     override fun onCreate() {
         super.onCreate()
@@ -63,12 +62,10 @@ class OverlayService : Service() {
 
         addBubbleView()
         addPanelView()
-        addEspView()
+        addEspView() // إضافة طبقة الكاشف للشاشة
 
         applyCoreAlign(prefs.getCoreAlign())
         setPanelVisible(prefs.isOverlayExpanded())
-
-        startMemoryLoop()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -79,10 +76,9 @@ class OverlayService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
-        isRunning = false
         bubbleView?.let { runCatching { windowManager.removeView(it) } }
         panelView?.let { runCatching { windowManager.removeView(it) } }
-        espView?.let { runCatching { windowManager.removeView(it) } }
+        espView?.let { runCatching { windowManager.removeView(it) } } // إزالة طبقة الكاشف عند الإيقاف
         super.onDestroy()
     }
 
@@ -132,6 +128,7 @@ class OverlayService : Service() {
         bubbleParams = params
     }
 
+    // دالة إنشاء وإضافة طبقة الكاشف (ESPView) الشفافة فوق اللعبة
     private fun addEspView() {
         espView = ESPView(this)
         val params = WindowManager.LayoutParams(
@@ -153,34 +150,6 @@ class OverlayService : Service() {
             windowManager.addView(espView, params)
         } catch (e: Exception) {
             e.printStackTrace()
-        }
-    }
-
-    private fun startMemoryLoop() {
-        thread {
-            while (isRunning) {
-                try {
-                    val pid = MemoryUtils.findProcessId("com.tencent.ig")
-                    if (pid != -1) {
-                        val baseAddr = MemoryUtils.getModuleBase(pid, "libUE4.so")
-                        if (baseAddr != 0L) {
-                            val uWorldAddr = baseAddr + MemoryUtils.OFFSET_UWORLD
-                            val uWorld = KernelMemory.readLong(pid, uWorldAddr)
-                            
-                            val activePlayers = 0 
-                            
-                            espView?.updateGameData(pid, baseAddr, uWorld, activePlayers)
-                        } else {
-                            espView?.updateGameData(pid, 0L, 0L, 0)
-                        }
-                    } else {
-                        espView?.updateGameData(-1, 0L, 0L, 0)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-                Thread.sleep(100)
-            }
         }
     }
 
@@ -333,6 +302,8 @@ class OverlayService : Service() {
             WindowManager.LayoutParams.TYPE_PHONE
         }
     }
+
+    private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
 
     private fun cmToPx(cm: Float): Int =
         TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_MM, cm * 10f, resources.displayMetrics).toInt()
@@ -504,15 +475,17 @@ class OverlayService : Service() {
                         it.y = params.y
                         panelView?.let { pv -> runCatching { windowManager.updateViewLayout(pv, it) } }
                     }
-                    return true
+                    return typeTrue()
                 }
                 MotionEvent.ACTION_UP -> {
                     prefs.setOverlayPosition(params.x, params.y)
                     onTap(!moved)
-                    return true
+                    return typeTrue()
                 }
             }
             return false
         }
+        
+        private fun typeTrue(): Boolean = true
     }
 }
