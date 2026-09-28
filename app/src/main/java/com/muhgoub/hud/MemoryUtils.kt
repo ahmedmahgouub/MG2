@@ -7,13 +7,18 @@ import java.nio.ByteOrder
 
 object MemoryUtils {
 
-    // الأوفسيتات المحدثة والمستخرجة نهائياً بدقة
-    const val OFFSET_UWORLD: Long = 0x40D0C7F
-    const val OFFSET_PROJECTION_MATRIX: Long = 0x4126140
-    const val OFFSET_PERSISTENT_LEVEL: Long = 0x422C7C8
-    const val OFFSET_PLAYER_CONTROLLER: Long = 0x3FC17C0
-    const val OFFSET_PAWN_VELOCITY: Long = 0x40DDAD3
-    const val OFFSET_PLAYER_INDEX: Long = 0x412FEA8
+    // الأوفسيتات الأساسية والمباشرة للإصدار الأخير
+    const val OFFSET_GNAME: Long = 0xF08F820L
+    const val OFFSET_GWORLD: Long = 0xF624D40L
+    const val OFFSET_VIEW_WORLD: Long = 0xF5FBFD0L
+    const val OFFSET_UE4_POINTER: Long = 0xE0C36E0L
+
+    // الإزاحات الداخلية للهيكل
+    const val OFFSET_PERSISTENT_LEVEL: Long = 0x30L
+    const val OFFSET_ACTOR_ARRAY: Long = 0x98L
+    const val OFFSET_ACTOR_COUNT: Long = 0xA0L
+    const val OFFSET_ROOT_COMPONENT: Long = 0x208L
+    const val OFFSET_RELATIVE_LOCATION: Long = 0x1E4L
 
     fun findProcessId(packageName: String): Int {
         var pid = -1
@@ -88,27 +93,6 @@ object MemoryUtils {
             e.printStackTrace()
         }
         return 0L
-    }
-
-    fun readVector3(pid: Int, address: Long): Vector3 {
-        try {
-            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=12 2>/dev/null"
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-            val inputStream = process.inputStream
-            val buffer = ByteArray(12)
-            val bytesRead = inputStream.read(buffer)
-            process.waitFor()
-            if (bytesRead == 12) {
-                val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN)
-                val x = byteBuffer.float
-                val y = byteBuffer.float
-                val z = byteBuffer.float
-                return Vector3(x, y, z)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return Vector3(0f, 0f, 0f)
     }
 
     fun readMatrix(pid: Int, address: Long): FloatArray {
