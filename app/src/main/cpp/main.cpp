@@ -10,6 +10,7 @@ struct Vector3 {
     float x, y, z;
 };
 
+// دالة قراءة الذاكرة فائقة السرعة والمستقرة عبر المعالج بالروت (PID)
 template <typename T>
 T Read(int pid, uintptr_t address) {
     T buffer;
@@ -22,13 +23,14 @@ T Read(int pid, uintptr_t address) {
     return buffer;
 }
 
+// تم تصحيح مصفوفات النصوص هنا لمنع خطأ strtoull و snprintf تماماً
 uintptr_t get_module_base(int pid, const char* module_name) {
     uintptr_t addr = 0;
-    char maps_path;
+    char maps_path[256]; 
     snprintf(maps_path, sizeof(maps_path), "/proc/%d/maps", pid);
     FILE* fp = fopen(maps_path, "r");
     if (fp) {
-        char line;
+        char line[512]; 
         while (fgets(line, sizeof(line), fp)) {
             if (strstr(line, module_name) && strstr(line, "r-xp")) {
                 addr = strtoull(line, nullptr, 16);
@@ -53,6 +55,7 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
     uintptr_t persistent_level = Read<uintptr_t>(pid, gworld + Offsets::PersistentLevel);
     if (!persistent_level) return nullptr;
 
+    // القراءة من الأوفستات الثابتة والمؤمنة للـ 64 بت
     uintptr_t actor_array = Read<uintptr_t>(pid, persistent_level + Offsets::ActorArray);
     int actor_count = Read<int>(pid, persistent_level + Offsets::ActorCount);
 
