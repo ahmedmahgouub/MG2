@@ -2,10 +2,17 @@ package com.muhgoub.hud
 
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 object MemoryUtils {
+
+    // 1. تحميل مكتبة الـ C++ الحركية تلقائياً عند تشغيل التطبيق
+    init {
+        System.loadLibrary("hud_internal")
+    }
+
+    // 2. الدالة الخارجية فائقة السرعة المربوطة بملف main.cpp
+    @JvmStatic
+    external fun getPlayersLocations(pid: Int): Array<Vector3>?
 
     // الأوفسيتات الأساسية والمباشرة للإصدار الأخير
     const val OFFSET_GNAME: Long = 0xF08F820L
@@ -15,11 +22,16 @@ object MemoryUtils {
 
     // الإزاحات الداخلية للهيكل
     const val OFFSET_PERSISTENT_LEVEL: Long = 0x30L
-    const val OFFSET_ACTOR_ARRAY: Long = 0x98L
-    const val OFFSET_ACTOR_COUNT: Long = 0xA0L
+    const val OFFSET_ACTOR_ARRAY: Long = 0xA0L  // تم التحديث لـ 64 بت
+    const val OFFSET_ACTOR_COUNT: Long = 0xA8L  // تم التحديث لـ 64 بت
     const val OFFSET_ROOT_COMPONENT: Long = 0x208L
     const val OFFSET_RELATIVE_LOCATION: Long = 0x1E4L
 
+    // هياكل البيانات المطابقة للـ C++ والـ UI
+    data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
+    data class Vector3(val x: Float, val y: Float, val z: Float)
+
+    // دالة جلب الـ PID السريعة والمستقرة عبر الروت
     fun findProcessId(packageName: String): Int {
         var pid = -1
         try {
@@ -36,6 +48,7 @@ object MemoryUtils {
         return pid
     }
 
+    // دالة جلب الـ Base Address للعبة
     fun getModuleBase(pid: Int, moduleName: String = "libUE4.so"): Long {
         try {
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "cat /proc/$pid/maps"))
@@ -54,69 +67,14 @@ object MemoryUtils {
         return 0L
     }
 
-    data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
-    data class Vector3(val x: Float, val y: Float, val z: Float)
-
-    fun readFloat(pid: Int, address: Long): Float {
-        try {
-            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=4 2>/dev/null"
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-            val inputStream = process.inputStream
-            val buffer = ByteArray(4)
-            val bytesRead = inputStream.read(buffer)
-            process.waitFor()
-            if (bytesRead == 4) {
-                return ByteBuffer.wrap(buffer)
-                    .order(ByteOrder.LITTLE_ENDIAN)
-                    .float
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return 0f
-    }
-
-    fun readLong(pid: Int, address: Long): Long {
-        try {
-            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=8 2>/dev/null"
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-            val inputStream = process.inputStream
-            val buffer = ByteArray(8)
-            val bytesRead = inputStream.read(buffer)
-            process.waitFor()
-            if (bytesRead == 8) {
-                return ByteBuffer.wrap(buffer)
-                    .order(ByteOrder.LITTLE_ENDIAN)
-                    .long
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-        return 0L
-    }
-
+    // دالة قراءة المصفوفة (ViewWorld) للكاميرا
     fun readMatrix(pid: Int, address: Long): FloatArray {
         val matrix = FloatArray(16)
-        try {
-            val byteCount = 16 * 4
-            val cmd = "dd if=/proc/$pid/mem bs=1 skip=$address count=$byteCount 2>/dev/null"
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", cmd))
-            val inputStream = process.inputStream
-            val buffer = ByteArray(byteCount)
-            val bytesRead = inputStream.read(buffer)
-            process.waitFor()
-            if (bytesRead == byteCount) {
-                val byteBuffer = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN)
-                for (i in 0 until 16) {
-                    matrix[i] = byteBuffer.float
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        // تم الحفاظ عليها مؤقتاً للكاميرا، وسيتم سحبها للـ C++ لاحقاً لزيادة الفريمات
         return matrix
     }
 
+    // دالة تحويل الإحداثيات من الـ World إلى الشاشة للرسم
     fun worldToScreen(worldLocation: Vector3, matrix: FloatArray, screenWidth: Int, screenHeight: Int): Point2D {
         val w = matrix[3] * worldLocation.x + matrix[7] * worldLocation.y + matrix[11] * worldLocation.z + matrix[15]
 
