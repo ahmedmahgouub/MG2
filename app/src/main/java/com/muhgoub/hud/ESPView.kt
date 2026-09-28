@@ -70,31 +70,16 @@ class ESPView @JvmOverloads constructor(
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        // قراءة مصفوفة الإسقاط
-                        val tempMatrix = MemoryUtils.readMatrix(currentPid, libBase + MemoryUtils.OFFSET_PROJECTION_MATRIX)
+                        // قراءة مصفوفة الإسقاط (ViewWorld)
+                        val tempMatrix = MemoryUtils.readMatrix(currentPid, libBase + MemoryUtils.OFFSET_VIEW_WORLD)
                         if (tempMatrix[0] != 0f) {
                             viewMatrix = tempMatrix
                         }
                         
-                        // قراءة الـ World باستخدام السلسلة الهرمية من GEngine والأوفسيتات الأصلية
-                        val gEnginePtr = MemoryUtils.readLong(currentPid, libBase + MemoryUtils.GEngine_Offset)
-                        if (gEnginePtr != 0L) {
-                            val gameInstance = MemoryUtils.readLong(currentPid, gEnginePtr + MemoryUtils.OFFSET_GAME_INSTANCE)
-                            if (gameInstance != 0L) {
-                                val localPlayers = MemoryUtils.readLong(currentPid, gameInstance + MemoryUtils.OFFSET_LOCAL_PLAYERS)
-                                if (localPlayers != 0L) {
-                                    val localPlayer = MemoryUtils.readLong(currentPid, localPlayers)
-                                    if (localPlayer != 0L) {
-                                        val viewportClient = MemoryUtils.readLong(currentPid, localPlayer + MemoryUtils.OFFSET_VIEWPORT_CLIENT)
-                                        if (viewportClient != 0L) {
-                                            val world = MemoryUtils.readLong(currentPid, viewportClient + MemoryUtils.OFFSET_WORLD)
-                                            if (world != 0L && world > 0x10000000L) {
-                                                cachedGWorld = world
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                        // قراءة GWorld المباشر
+                        val world = MemoryUtils.readLong(currentPid, libBase + MemoryUtils.OFFSET_GWORLD)
+                        if (world != 0L && world > 0x10000000L) {
+                            cachedGWorld = world
                         }
                         
                         var count = 0
@@ -111,11 +96,11 @@ class ESPView @JvmOverloads constructor(
                                     for (i in 0 until maxCount) {
                                         val actor = MemoryUtils.readLong(currentPid, actorsPtr + (i * 8L))
                                         if (actor != 0L && actor > 0x10000000L) {
-                                            val rootComponent = MemoryUtils.readLong(currentPid, actor + 0x208L)
+                                            val rootComponent = MemoryUtils.readLong(currentPid, actor + MemoryUtils.OFFSET_ROOT_COMPONENT)
                                             if (rootComponent != 0L && rootComponent > 0x10000000L) {
-                                                val x = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E4L)
-                                                val y = MemoryUtils.readFloat(currentPid, rootComponent + 0x1E8L)
-                                                val z = MemoryUtils.readFloat(currentPid, rootComponent + 0x1ECL)
+                                                val x = MemoryUtils.readFloat(currentPid, rootComponent + MemoryUtils.OFFSET_RELATIVE_LOCATION)
+                                                val y = MemoryUtils.readFloat(currentPid, rootComponent + MemoryUtils.OFFSET_RELATIVE_LOCATION + 4L)
+                                                val z = MemoryUtils.readFloat(currentPid, rootComponent + MemoryUtils.OFFSET_RELATIVE_LOCATION + 8L)
                                                 
                                                 if (x != 0f && y != 0f) {
                                                     tempPlayers.add(MemoryUtils.Vector3(x, y, z))
