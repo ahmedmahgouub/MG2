@@ -8,12 +8,6 @@ import android.view.View
 
 class ESPView(context: Context) : View(context) {
 
-    private val paint = Paint().apply {
-        isAntiAlias = true
-        textSize = 36f
-        style = Paint.Style.STROKE
-    }
-
     private val textPaint = Paint().apply {
         isAntiAlias = true
         textSize = 32f
@@ -21,7 +15,7 @@ class ESPView(context: Context) : View(context) {
         style = Paint.Style.FILL
     }
 
-    // حالات أزرار التحكم والخيارات (القائمة العائمة)
+    // حالات أزرار التحكم والخيارات
     var isBoxEnabled: Boolean = false
     var isLineEnabled: Boolean = false
     var isDistanceEnabled: Boolean = false
@@ -29,15 +23,13 @@ class ESPView(context: Context) : View(context) {
     var isNameEnabled: Boolean = false
     var isPlayerCountEnabled: Boolean = true
 
-    // متغيرات اللعبة المحدثة
+    // متغيرات اللعبة المحدثة من الذاكرة
     private var screenWidth = 0
     private var screenHeight = 0
-    private var actorsCount = 0
+    private var currentPid = -1
+    private var currentBaseAddr = 0L
+    private var currentUWorld = 0L
     private var viewMatrix: FloatArray = FloatArray(16)
-
-    init {
-        // تهيئة أولية
-    }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
@@ -45,22 +37,13 @@ class ESPView(context: Context) : View(context) {
         screenHeight = h
     }
 
-    // دوال تحديث البيانات لتغطية أي طريقة استدعاء من OverlayService بدون أخطاء
-    fun updateGameData(count: Int) {
-        this.actorsCount = count
-        invalidate()
-    }
-
-    fun updateGameData(matrix: FloatArray, count: Int) {
+    // دالة تحديث البيانات المتوافقة تماماً مع ما ترسله OverlayService
+    fun updateGameData(pid: Int, baseAddr: Long, uWorld: Long, matrix: FloatArray) {
+        this.currentPid = pid
+        this.currentBaseAddr = baseAddr
+        this.currentUWorld = uWorld
         this.viewMatrix = matrix
-        this.actorsCount = count
-        invalidate()
-    }
-
-    fun updateGameData(matrix: FloatArray, actors: Any?, count: Int) {
-        this.viewMatrix = matrix
-        this.actorsCount = count
-        invalidate()
+        invalidate() // إعادة الرسم في كل إطار
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -68,9 +51,9 @@ class ESPView(context: Context) : View(context) {
 
         if (screenWidth == 0 || screenHeight == 0) return
 
-        // رسم عدد اللاعبين أو الكيانات إذا كان مفعلًا
+        // عرض معلومات الذاكرة على الشاشة للتأكد من الاتصال
         if (isPlayerCountEnabled) {
-            canvas.drawText("Actors Count: $actorsCount", 50f, 100f, textPaint)
+            canvas.drawText("UWorld: ${if (currentUWorld != 0L) "Connected" else "Searching..."}", 50f, 100f, textPaint)
         }
     }
 }
