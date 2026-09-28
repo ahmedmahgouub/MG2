@@ -71,7 +71,9 @@ class ESPView @JvmOverloads constructor(
                     if (libBase != 0L) {
                         // 1. قراءة مصفوفة الإسقاط وتأمين الشرط هندسياً لمنع خطأ البناء الأحمر
                         val tempMatrix = MemoryUtils.readMatrix(currentPid, libBase + MemoryUtils.OFFSET_VIEW_WORLD)
-                        if (tempMatrix.isNotEmpty() && tempMatrix[0] != 0f) {
+                        
+                        // تم تصحيح الشرط برمجياً ليفحص الحجم بدقة بدون مقارنة فلوت خاطئة
+                        if (tempMatrix.isNotEmpty() && tempMatrix.size == 16) {
                             viewMatrix = tempMatrix
                         }
                         
