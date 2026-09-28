@@ -55,19 +55,17 @@ class MainActivity : AppCompatActivity() {
         btnLaunchPanel.setOnClickListener { onLaunchPanelClicked() }
         btnStopPanel.setOnClickListener { onStopPanelClicked() }
         
-        // عند الضغط على زر Normal: تفعيل الوضع العادي، وتعطيل وضع الكيرنال
+        // عند الضغط على زر Normal: تفعيل الوضع، إظهار رسالة تأكيد، وإعادة كلمة MUHGOUB بيضاء
         btnModeNormal.setOnClickListener { 
             setAppMode("normal")
-            MemoryUtils.isKernelModeEnabled = false
             tvKernelDisplay.text = "MUHGOUB"
             tvKernelDisplay.setTextColor(Color.WHITE)
             Toast.makeText(this, "تم تفعيل الوضع Normal", Toast.LENGTH_SHORT).show()
         }
         
-        // عند الضغط على زر Kernel: تفعيل وضع الكيرنال السريع وجلب الكيرنال الحقيقي
+        // عند الضغط على زر Kernel: تفعيل الوضع وجلب الكيرنال الحقيقي وتلوينه بالبرتقالي الغامق
         btnModeTurbo.setOnClickListener { 
             setAppMode("turbo")
-            MemoryUtils.isKernelModeEnabled = true
             requestRootAndFetchKernel()
         }
 
@@ -218,7 +216,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun applyModeUi(mode: String) {
         val isTurbo = mode == "turbo"
-        MemoryUtils.isKernelModeEnabled = isTurbo
         btnModeNormal.setBackgroundResource(if (isTurbo) R.drawable.bg_segment_outline else R.drawable.bg_segment_filled)
         btnModeTurbo.setBackgroundResource(if (isTurbo) R.drawable.bg_segment_filled else R.drawable.bg_segment_outline)
     }
