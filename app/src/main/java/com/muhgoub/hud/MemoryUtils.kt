@@ -31,8 +31,16 @@ object MemoryUtils {
     data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
     data class Vector3(val x: Float, val y: Float, val z: Float)
 
-    // دالة فحص مجلد الـ /proc لقنص الـ PID الصافي بدون أوامر شيل محظورة
+    // 🟢 تم دمج طلب روت صريح ومؤمن لإجبار النظام على إظهار نافذة الصلاحية فوراً
     fun findProcessId(packageName: String): Int {
+        try {
+            // سطر إجباري لطلب الروت من KernelSU لضمان تخطي جدار الحماية
+            val rootCheck = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
+            rootCheck.waitFor()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         val procDir = File("/proc")
         val files = procDir.listFiles() ?: return -1
         for (file in files) {
@@ -52,7 +60,7 @@ object MemoryUtils {
                             }
                         }
                     } catch (e: Exception) {
-                        e.printStackTrace()
+                        // تخطي الملفات الأمنية المعزولة
                     }
                 }
             }
@@ -82,7 +90,6 @@ object MemoryUtils {
         return FloatArray(16)
     }
 
-    // 🟢 تم إغلاق وتثبيت أرقام خانات مصفوفة الكاميرا الـ 16 القياسية حرفاً بحرف لمنع الـ Type Mismatch
     fun worldToScreen(worldLocation: Vector3, matrix: FloatArray, screenWidth: Int, screenHeight: Int): Point2D {
         if (matrix.size < 16) return Point2D(0f, 0f, false)
         
