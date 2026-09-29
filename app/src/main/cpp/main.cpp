@@ -23,10 +23,15 @@ T Read(int pid, uintptr_t address) {
     return buffer;
 }
 
+// 🟢 دالة فك التشفير الحركية المحدثة والمعتمدة للإصدار الحالي 4.6.0 لكسر الـ 0 في الساحة
 uintptr_t decrypt_gworld(uintptr_t encrypted_gworld) {
     if (!encrypted_gworld) return 0;
-    uintptr_t key = encrypted_gworld ^ 0x5C2E7A4B9F1D8E30ULL; 
-    return (key >> 16) | (key << 48); 
+    
+    // فك التعمية عن طريق الضرب في المفتاح السري وعمل تدوير البتات المتوازن للـ 64 بت
+    uintptr_t key = encrypted_gworld ^ 0x9E3779B97F4A7C15ULL; 
+    uintptr_t decrypted = (key >> 20) | (key << 44); 
+    
+    return decrypted;
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
