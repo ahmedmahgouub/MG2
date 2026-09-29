@@ -31,6 +31,7 @@ object MemoryUtils {
     data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
     data class Vector3(val x: Float, val y: Float, val z: Float)
 
+    // دالة فحص مجلد الـ /proc لقنص الـ PID الصافي بدون أوامر شيل محظورة
     fun findProcessId(packageName: String): Int {
         val procDir = File("/proc")
         val files = procDir.listFiles() ?: return -1
@@ -51,7 +52,7 @@ object MemoryUtils {
                             }
                         }
                     } catch (e: Exception) {
-                        // تخطي الملفات المحمية
+                        e.printStackTrace()
                     }
                 }
             }
@@ -81,9 +82,9 @@ object MemoryUtils {
         return FloatArray(16)
     }
 
+    // 🟢 تم إغلاق وتثبيت أرقام خانات مصفوفة الكاميرا الـ 16 القياسية حرفاً بحرف لمنع الـ Type Mismatch
     fun worldToScreen(worldLocation: Vector3, matrix: FloatArray, screenWidth: Int, screenHeight: Int): Point2D {
-        val matrixSize = 16
-        if (matrix.size < matrixSize) return Point2D(0f, 0f, false)
+        if (matrix.size < 16) return Point2D(0f, 0f, false)
         
         val w = matrix[3] * worldLocation.x + matrix[7] * worldLocation.y + matrix[11] * worldLocation.z + matrix[15]
         if (w < 0.01f) return Point2D(0f, 0f, false)
