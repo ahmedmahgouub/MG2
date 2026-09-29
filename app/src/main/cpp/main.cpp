@@ -23,6 +23,7 @@ T Read(int pid, uintptr_t address) {
     return buffer;
 }
 
+// 🟢 تم ضبط حجم الـ buffers وإغلاق الحواصر القياسية هندسياً لمنع الفيلد
 uintptr_t get_module_base(int pid, const char* module_name) {
     uintptr_t addr = 0;
     char maps_path[256]; 
@@ -31,7 +32,8 @@ uintptr_t get_module_base(int pid, const char* module_name) {
     if (fp) {
         char line[512]; 
         while (fgets(line, sizeof(line), fp)) {
-            if (strstr(line, module_name) && strstr(line, "r-xp")) {
+            // فحص شامل لجميع مكتبات المحرك الحية r-xp لتخطي تحديث 4.6.0
+            if ((strstr(line, "libUE4.so") || strstr(line, "libanogs.so") || strstr(line, "libshadowtracker")) && strstr(line, "r-xp")) {
                 sscanf(line, "%lx", &addr);
                 break;
             }
