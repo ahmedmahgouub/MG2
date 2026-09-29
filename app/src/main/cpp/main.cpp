@@ -23,18 +23,10 @@ T Read(int pid, uintptr_t address) {
     return buffer;
 }
 
-// 🟢 دالة فك التشفير الاحترافية والمعدلة بالكامل لفك حظر الأوفست 0xF624D40 حياً
 uintptr_t decrypt_gworld(uintptr_t encrypted_gworld) {
     if (!encrypted_gworld) return 0;
-    
-    // عملية فك التشفير الرسمية للـ 64 بت: الـ XOR متبوع بتدوير متزن للـ خانات (ROL/ROR)
     uintptr_t key = encrypted_gworld ^ 0x5C2E7A4B9F1D8E30ULL; 
-    uintptr_t decrypted = (key >> 16) | (key << 48); 
-    
-    // تأمين جدار العنوان لضمان عدم خروج مسار الذاكرة الـ 64 بت عن النطاق التنفيذي
-    if ((decrypted & 0xFFFFFFFF00000000ULL) == 0) return 0;
-    
-    return decrypted;
+    return (key >> 16) | (key << 48); 
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
@@ -44,7 +36,7 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
     uintptr_t base_address = (uintptr_t)base_address_java;
     char status_buf[256] = {0};
 
-    // قراءة الـ GWorld المشفر من أوفست صاحبك الثابت والمضمون
+    // قراءة الـ GWorld من أوفست صاحبك الثابت والمضمون
     uintptr_t encrypted_gworld = Read<uintptr_t>(pid, base_address + 0xF624D40);
     uintptr_t gworld = decrypt_gworld(encrypted_gworld);
     
@@ -54,21 +46,24 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
     if (gworld) {
         uintptr_t persistent_level = Read<uintptr_t>(pid, gworld + Offsets::PersistentLevel);
         if (persistent_level) {
-            uintptr_t actor_array = Read<uintptr_t>(pid, persistent_level + Offsets::ActorArray);
-            actor_count = Read<int>(pid, persistent_level + Offsets::ActorCount);
+            // 🟢 تم التحديث لأوفستات الهيكل الجديدة للإصدار الحالي لقنص اللاعبين بنجاح
+            uintptr_t actor_array = Read<uintptr_t>(pid, persistent_level + 0x98); // أوفست المصفوفة المحدث
+            actor_count = Read<int>(pid, persistent_level + 0xA0);        // أوفست العداد المحدث
 
-            int max_actors = (actor_count > 800) ? 800 : actor_count;
+            if (actor_count > 0 && actor_count < 2000) {
+                int max_actors = (actor_count > 800) ? 800 : actor_count;
 
-            for (int i = 0; i < max_actors; i++) {
-                uintptr_t actor = Read<uintptr_t>(pid, actor_array + (i * 8));
-                if (!actor) continue;
+                for (int i = 0; i < max_actors; i++) {
+                    uintptr_t actor = Read<uintptr_t>(pid, actor_array + (i * 8));
+                    if (!actor) continue;
 
-                uintptr_t root_component = Read<uintptr_t>(pid, actor + Offsets::RootComponent);
-                if (!root_component) continue;
+                    uintptr_t root_component = Read<uintptr_t>(pid, actor + Offsets::RootComponent);
+                    if (!root_component) continue;
 
-                Vector3 location = Read<Vector3>(pid, root_component + Offsets::RelativeLocation);
-                if (location.x != 0.0f && location.y != 0.0f) {
-                    temp_players.push_back(Vector3{location.x, location.y, location.z});
+                    Vector3 location = Read<Vector3>(pid, root_component + Offsets::RelativeLocation);
+                    if (location.x != 0.0f && location.y != 0.0f) {
+                        temp_players.push_back(Vector3{location.x, location.y, location.z});
+                    }
                 }
             }
         }
