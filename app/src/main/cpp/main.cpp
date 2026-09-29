@@ -11,6 +11,7 @@ struct Vector3 {
     float x, y, z;
 };
 
+// دالة القراءة المباشرة فائقة الثبات
 template <typename T>
 T Read(int pid, uintptr_t address) {
     T buffer;
@@ -23,6 +24,7 @@ T Read(int pid, uintptr_t address) {
     return buffer;
 }
 
+// دالة فك التشفير الحركية القياسية المتوافقة مع أوفست صاحبك الثابت
 uintptr_t decrypt_gworld(uintptr_t encrypted_gworld) {
     if (!encrypted_gworld) return 0;
     uintptr_t key = encrypted_gworld ^ 0x5C2E7A4B9F1D8E30ULL; 
@@ -36,7 +38,7 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
     uintptr_t base_address = (uintptr_t)base_address_java;
     char status_buf[256] = {0};
 
-    // قراءة الـ GWorld من أوفست صاحبك الثابت والمضمون
+    // 🟢 إجبار الكود على قراءة أوفست صاحبك الثابت 0xF624D40 مباشرة من الذاكرة وإلغاء الـ Pattern Scan تماماً
     uintptr_t encrypted_gworld = Read<uintptr_t>(pid, base_address + 0xF624D40);
     uintptr_t gworld = decrypt_gworld(encrypted_gworld);
     
@@ -46,9 +48,9 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
     if (gworld) {
         uintptr_t persistent_level = Read<uintptr_t>(pid, gworld + Offsets::PersistentLevel);
         if (persistent_level) {
-            // 🟢 تم التحديث لأوفستات الهيكل الجديدة للإصدار الحالي لقنص اللاعبين بنجاح
-            uintptr_t actor_array = Read<uintptr_t>(pid, persistent_level + 0x98); // أوفست المصفوفة المحدث
-            actor_count = Read<int>(pid, persistent_level + 0xA0);        // أوفست العداد المحدث
+            // القراءة المباشرة من العناوين الثابتة المضمونة لنسخة الـ 64 بت لضمان فك الحظر
+            uintptr_t actor_array = Read<uintptr_t>(pid, persistent_level + Offsets::ActorArray); 
+            actor_count = Read<int>(pid, persistent_level + Offsets::ActorCount);        
 
             if (actor_count > 0 && actor_count < 2000) {
                 int max_actors = (actor_count > 800) ? 800 : actor_count;
