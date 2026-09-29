@@ -89,7 +89,7 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
         }
     }
 
-    // 🟢 تجهيز المخرج النصي الذكي ليعرض الـ PID والـ Base والوضع متوافقاً مع الكوتلن بدون ربع غلطة
+    // 🟢 تم تأمين حجم المصفوفة النصية هنا [256] لمنع كراش وفيضان الذاكرة نهائياً
     char status_buf[256];
     if (gworld) {
         snprintf(status_buf, sizeof(status_buf), "PID: %d | Base: 0x%lx | Players: %d", pid, base_address, (int)temp_players.size());
@@ -97,7 +97,6 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
         snprintf(status_buf, sizeof(status_buf), "PID: %d | Base: 0x%lx | In Lobby", pid, base_address);
     }
     
-    // إرسال رسالة الحالة إلى كود الكوتلن عبر حقل ثابت أو استدعاء UI إذا لزم
     jclass memoryUtilsClass = env->FindClass("com/muhgoub/hud/MemoryUtils");
     if (memoryUtilsClass) {
         jfieldID statusField = env->GetStaticFieldID(memoryUtilsClass, "nativeStatusMessage", "Ljava/lang/String;");
