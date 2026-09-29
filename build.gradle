@@ -6,7 +6,8 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.7.0'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.20"
+        // 🟢 ترقية بلجن الكوتلن لإصدار 2.0.20 المتوافق تماماً مع Gradle 8.7 لإنهاء خطأ الـ HasConvention
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.20"
     }
 }
 
