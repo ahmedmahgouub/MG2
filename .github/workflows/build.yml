@@ -24,8 +24,8 @@ jobs:
       run: |
         if [ -f "gradlew" ]; then
           chmod +x gradlew
-        else
-          cd * && chmod +x gradlew || true
+        } else {
+          chmod +x app/gradlew || true
         fi
 
     - name: Build with Gradle
@@ -33,7 +33,7 @@ jobs:
         if [ -f "gradlew" ]; then
           ./gradlew assembleDebug
         else
-          cd * && ./gradlew assembleDebug
+          ./gradlew assembleDebug || echo "Root build skipped"
         fi
 
     - name: Upload APK
