@@ -23,7 +23,7 @@ T Read(int pid, uintptr_t address) {
     return buffer;
 }
 
-// دالة جلب عنوان الـ Base الـ 64 بت الطويل بدقة طبقاً لتصحيح كود صاحبك
+// دالة جلب عنوان الـ Base الـ 64 بت الطويل بدقة لمنع البتر والقطع
 uintptr_t get_module_base(int pid, const char* module_name) {
     uintptr_t addr = 0;
     char maps_path[256]; 
@@ -33,7 +33,6 @@ uintptr_t get_module_base(int pid, const char* module_name) {
         char line[512]; 
         while (fgets(line, sizeof(line), fp)) {
             if (strstr(line, module_name) && strstr(line, "r-xp")) {
-                // استخدام lx% لضمان جلب كامل مسار العنوان الضخم بدون قطع
                 sscanf(line, "%lx", &addr);
                 break;
             }
@@ -43,7 +42,7 @@ uintptr_t get_module_base(int pid, const char* module_name) {
     return addr;
 }
 
-// دالة فك تشفير عنوان الـ GWorld الحركي للنسخة الحالية لتخطي عزل الحماية
+// دالة فك تشفير عنوان الـ GWorld الحركي للنسخة العالمية
 uintptr_t decrypt_gworld(uintptr_t encrypted_gworld) {
     if (!encrypted_gworld) return 0;
     uintptr_t key = encrypted_gworld ^ 0x5C2E7A4B9F1D8E30ULL; 
@@ -57,10 +56,10 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
     uintptr_t base_address = get_module_base(pid, "libUE4.so");
     if (!base_address) return nullptr;
 
-    // 1. قراءة الـ GWorld المشفر من عنوان الـ Base النظيف
+    // 1. قراءة الـ GWorld المشفر
     uintptr_t encrypted_gworld = Read<uintptr_t>(pid, base_address + Offsets::GWorld);
     
-    // 2. تطبيق فك التشفير الحركي لإصلاح مسار الذاكرة حية
+    // 2. تطبيق فك التشفير الحركي لإصلاح العنوان
     uintptr_t gworld = decrypt_gworld(encrypted_gworld);
     
     std::vector<Vector3> temp_players;
@@ -89,7 +88,7 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
         }
     }
 
-    // 🟢 تم تأمين حجم المصفوفة النصية هنا [256] لمنع كراش وفيضان الذاكرة نهائياً
+    // تصحيح حجم مصفوفة النص الثنائية لحظر مشكلة الكراش
     char status_buf[256];
     if (gworld) {
         snprintf(status_buf, sizeof(status_buf), "PID: %d | Base: 0x%lx | Players: %d", pid, base_address, (int)temp_players.size());
