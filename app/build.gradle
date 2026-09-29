@@ -4,6 +4,7 @@ plugins {
 }
 
 android {
+    // 🟢 السطر الجذري البديل الذي ينهي تضارب الحزم مع الـ Manifest نهائياً
     namespace 'com.muhgoub.hud'
     compileSdk 34
 
