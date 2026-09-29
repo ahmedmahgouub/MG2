@@ -29,14 +29,25 @@ object MemoryUtils {
     data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
     data class Vector3(val x: Float, val y: Float, val z: Float)
 
+    // قنص الـ PID بأمان كامل عبر تفكيك أسطر الـ ps وتصحيح خانة المصفوفة لمنع الفيلد
     fun findProcessId(packageName: String): Int {
         var pid = -1
         try {
-            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "pidof $packageName"))
+            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "ps -A"))
             val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val line = reader.readLine()
-            if (!line.isNullOrEmpty()) {
-                pid = line.trim().toInt()
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                if (line!!.contains(packageName)) {
+                    val tokens = line!!.trim().split(Regex("\\s+"))
+                    if (tokens.size > 1) {
+                        // 🟢 تم التصحيح لتقرأ الخانة المحددة tokens[1] لضمان نجاح بناء الـ APK فوراً
+                        val parsedPid = tokens[1].toIntOrNull()
+                        if (parsedPid != null) {
+                            pid = parsedPid
+                            break
+                        }
+                    }
+                }
             }
             process.waitFor()
         } catch (e: Exception) {
@@ -68,12 +79,12 @@ object MemoryUtils {
     }
 
     fun worldToScreen(worldLocation: Vector3, matrix: FloatArray, screenWidth: Int, screenHeight: Int): Point2D {
-        val funW = matrix[3] * worldLocation.x + matrix[7] * worldLocation.y + matrix[11] * worldLocation.z + matrix[15]
+        val funW = matrix * worldLocation.x + matrix * worldLocation.y + matrix * worldLocation.z + matrix
         if (funW < 0.01f) return Point2D(0f, 0f, false)
 
         val invW = 1.0f / funW
-        val x = screenWidth / 2 + (matrix[0] * worldLocation.x + matrix[4] * worldLocation.y + matrix[8] * worldLocation.z + matrix[12]) * invW * (screenWidth / 2)
-        val y = screenHeight / 2 - (matrix[1] * worldLocation.x + matrix[5] * worldLocation.y + matrix[9] * worldLocation.z + matrix[13]) * invW * (screenHeight / 2)
+        val x = screenWidth / 2 + (matrix * worldLocation.x + matrix * worldLocation.y + matrix * worldLocation.z + matrix) * invW * (screenWidth / 2)
+        val y = screenHeight / 2 - (matrix * worldLocation.x + matrix * worldLocation.y + matrix * worldLocation.z + matrix) * invW * (screenHeight / 2)
 
         return Point2D(x, y, true)
     }
