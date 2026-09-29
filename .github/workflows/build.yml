@@ -20,14 +20,25 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
+    - name: Auto-generate missing Gradle Wrapper Jar
+      run: |
+        GRADLEW_PATH=$(find . -name "gradlew" -print -quit)
+        if [ ! -z "$GRADLEW_PATH" ]; then
+          MODULE_DIR=$(dirname "$GRADLEW_PATH")
+          cd "$MODULE_DIR"
+          # أمر سحري لتوليد الـ Jar الناقص تلقائياً من ملفات النظام الصافية
+          gradle wrapper --gradle-version 8.4
+        else
+          gradle wrapper --gradle-version 8.4
+        fi
+
     - name: Grant execute permission for gradlew
       run: |
         GRADLEW_PATH=$(find . -name "gradlew" -print -quit)
         if [ ! -z "$GRADLEW_PATH" ]; then
           chmod +x "$GRADLEW_PATH"
-          echo "Found and configured gradlew at: $GRADLEW_PATH"
         else
-          echo "Error: gradlew not found anywhere in the repository"
+          echo "Error: gradlew still missing"
           exit 1
         fi
 
