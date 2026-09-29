@@ -26,10 +26,9 @@ jobs:
         if [ ! -z "$GRADLEW_PATH" ]; then
           MODULE_DIR=$(dirname "$GRADLEW_PATH")
           cd "$MODULE_DIR"
-          # 🟢 ترقية إصدار التوليد تلقائياً إلى 8.7 ليتوافق مع الـ build.gradle وينسف خطأ التضارب
-          gradle wrapper --gradle-version 8.7
+          gradle wrapper --gradle-version 8.4
         else
-          gradle wrapper --gradle-version 8.7
+          gradle wrapper --gradle-version 8.4
         fi
 
     - name: Grant execute permission for gradlew
@@ -38,7 +37,6 @@ jobs:
         if [ ! -z "$GRADLEW_PATH" ]; then
           chmod +x "$GRADLEW_PATH"
         else
-          echo "Error: gradlew still missing"
           exit 1
         fi
 
@@ -50,7 +48,6 @@ jobs:
           cd "$MODULE_DIR"
           ./gradlew assembleDebug
         else
-          echo "Error: No gradlew found to build"
           exit 1
         fi
 
