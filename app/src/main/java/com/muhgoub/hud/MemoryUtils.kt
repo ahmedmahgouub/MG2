@@ -5,12 +5,16 @@ import java.io.InputStreamReader
 
 object MemoryUtils {
 
-    // 1. تحميل مكتبة الـ C++ الحركية تلقائياً عند تشغيل التطبيق
+    // 🟢 المتغير النصي المشترك لاستقبال رسالة الـ Base والـ PID من الـ C++
+    @JvmStatic
+    var nativeStatusMessage: String = "WAITING FOR PUBG..."
+
+    // تحميل مكتبة الـ C++ الحركية تلقائياً عند تشغيل التطبيق
     init {
         System.loadLibrary("hud_internal")
     }
 
-    // 2. الدالة الخارجية فائقة السرعة المربوطة بملف main.cpp
+    // الدالة الخارجية فائقة السرعة المربوطة بملف main.cpp لربط معمارية 64 بت
     @JvmStatic
     external fun getPlayersLocations(pid: Int): Array<Vector3>?
 
@@ -22,8 +26,8 @@ object MemoryUtils {
 
     // الإزاحات الداخلية للهيكل
     const val OFFSET_PERSISTENT_LEVEL: Long = 0x30L
-    const val OFFSET_ACTOR_ARRAY: Long = 0xA0L  // تم التحديث لـ 64 بت
-    const val OFFSET_ACTOR_COUNT: Long = 0xA8L  // تم التحديث لـ 64 بت
+    const val OFFSET_ACTOR_ARRAY: Long = 0xA0L  // تم التحديث لـ 64 بت لضمان عدم القراءة الصفرية
+    const val OFFSET_ACTOR_COUNT: Long = 0xA8L  // تم التحديث لـ 64 بت لضمان عدم القراءة الصفرية
     const val OFFSET_ROOT_COMPONENT: Long = 0x208L
     const val OFFSET_RELATIVE_LOCATION: Long = 0x1E4L
 
@@ -48,7 +52,7 @@ object MemoryUtils {
         return pid
     }
 
-    // دالة جلب الـ Base Address للعبة
+    // دالة الاحتياط لجلب عنوان الـ Base Address للعبة في الكوتلن
     fun getModuleBase(pid: Int, moduleName: String = "libUE4.so"): Long {
         try {
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "cat /proc/$pid/maps"))
@@ -70,11 +74,10 @@ object MemoryUtils {
     // دالة قراءة المصفوفة (ViewWorld) للكاميرا
     fun readMatrix(pid: Int, address: Long): FloatArray {
         val matrix = FloatArray(16)
-        // تم الحفاظ عليها مؤقتاً للكاميرا، وسيتم سحبها للـ C++ لاحقاً لزيادة الفريمات
         return matrix
     }
 
-    // دالة تحويل الإحداثيات من الـ World إلى الشاشة للرسم
+    // دالة تحويل الإحداثيات من الـ World إلى الشاشة للرسم المباشر للمربعات
     fun worldToScreen(worldLocation: Vector3, matrix: FloatArray, screenWidth: Int, screenHeight: Int): Point2D {
         val w = matrix[3] * worldLocation.x + matrix[7] * worldLocation.y + matrix[11] * worldLocation.z + matrix[15]
 
