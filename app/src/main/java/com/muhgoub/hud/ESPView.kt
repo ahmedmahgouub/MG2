@@ -15,13 +15,6 @@ class ESPView @JvmOverloads constructor(
 
     private var isRunning = false
     private var scope: CoroutineScope? = null
-    private var currentPid = -1
-    private val supportedPackages = arrayOf(
-        "com.tencent.ig",
-        "com.vng.pubgmobile",
-        "com.pubg.krmobile",
-        "com.rekoo.pubg"
-    )
     
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
@@ -56,45 +49,20 @@ class ESPView @JvmOverloads constructor(
         scope = CoroutineScope(Dispatchers.Default + Job())
         scope?.launch {
             while (isRunning) {
-                currentPid = -1
-                for (pkg in supportedPackages) {
-                    val pid = MemoryUtils.findProcessId(pkg)
-                    if (pid != -1) {
-                        currentPid = pid
-                        break
-                    }
+                // استدعاء مباشر ودائم لدالة الـ C++ وهي التي تتولى قنص الـ PID داخلياً بأمان وبدون تعليق الكوتلن
+                val nativePlayers = MemoryUtils.getPlayersLocations(1)
+                val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
+
+                if (nativePlayers != null) {
+                    tempPlayers.addAll(nativePlayers)
+                }
+
+                synchronized(playerList) {
+                    playerList.clear()
+                    playerList.addAll(tempPlayers)
                 }
                 
-                if (currentPid != -1) {
-                    val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
-                    
-                    if (libBase != 0L) {
-                        val tempMatrix = MemoryUtils.readMatrix(currentPid, libBase + MemoryUtils.OFFSET_VIEW_WORLD)
-                        if (tempMatrix.isNotEmpty() && tempMatrix.size == 16) {
-                            viewMatrix = tempMatrix
-                        }
-                        
-                        // استدعاء محرك الـ C++ المطور فائق السرعة
-                        val nativePlayers = MemoryUtils.getPlayersLocations(currentPid)
-                        val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
-
-                        if (nativePlayers != null) {
-                            tempPlayers.addAll(nativePlayers)
-                        }
-
-                        synchronized(playerList) {
-                            playerList.clear()
-                            playerList.addAll(tempPlayers)
-                        }
-                        
-                        // 🟢 قراءة الرسالة الحية المحدثة من الـ C++ مباشرة لعرض الـ Base والعنوان الطويل
-                        statusMessage = MemoryUtils.nativeStatusMessage
-                    } else {
-                        statusMessage = "PID: $currentPid | WAITING FOR LIB..."
-                    }
-                } else {
-                    statusMessage = "WAITING FOR PUBG..."
-                }
+                statusMessage = MemoryUtils.nativeStatusMessage
 
                 withContext(Dispatchers.Main) {
                     invalidate()
@@ -112,7 +80,6 @@ class ESPView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        // رسم شريط الحالة المحترف أعلى اليسار
         canvas.drawText(statusMessage, 30f, 120f, textPaint)
 
         synchronized(playerList) {
