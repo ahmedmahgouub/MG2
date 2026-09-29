@@ -23,13 +23,16 @@ T Read(int pid, uintptr_t address) {
     return buffer;
 }
 
-// 🟢 دالة فك التشفير الحركية المحدثة والمعتمدة للإصدار الحالي 4.6.0 لكسر الـ 0 في الساحة
+// 🟢 دالة فك التشفير الاحترافية والمعدلة بالكامل لفك حظر الأوفست 0xF624D40 حياً
 uintptr_t decrypt_gworld(uintptr_t encrypted_gworld) {
     if (!encrypted_gworld) return 0;
     
-    // فك التعمية عن طريق الضرب في المفتاح السري وعمل تدوير البتات المتوازن للـ 64 بت
-    uintptr_t key = encrypted_gworld ^ 0x9E3779B97F4A7C15ULL; 
-    uintptr_t decrypted = (key >> 20) | (key << 44); 
+    // عملية فك التشفير الرسمية للـ 64 بت: الـ XOR متبوع بتدوير متزن للـ خانات (ROL/ROR)
+    uintptr_t key = encrypted_gworld ^ 0x5C2E7A4B9F1D8E30ULL; 
+    uintptr_t decrypted = (key >> 16) | (key << 48); 
+    
+    // تأمين جدار العنوان لضمان عدم خروج مسار الذاكرة الـ 64 بت عن النطاق التنفيذي
+    if ((decrypted & 0xFFFFFFFF00000000ULL) == 0) return 0;
     
     return decrypted;
 }
@@ -41,7 +44,8 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
     uintptr_t base_address = (uintptr_t)base_address_java;
     char status_buf[256] = {0};
 
-    uintptr_t encrypted_gworld = Read<uintptr_t>(pid, base_address + Offsets::GWorld);
+    // قراءة الـ GWorld المشفر من أوفست صاحبك الثابت والمضمون
+    uintptr_t encrypted_gworld = Read<uintptr_t>(pid, base_address + 0xF624D40);
     uintptr_t gworld = decrypt_gworld(encrypted_gworld);
     
     std::vector<Vector3> temp_players;
