@@ -23,28 +23,6 @@ T Read(int pid, uintptr_t address) {
     return buffer;
 }
 
-// 🟢 تم تحديث الدالة هندسياً لتقنص أول عنوان تنفيذي مستقر للعبة وتتخطى قيد الأسماء الثابتة كلياً
-uintptr_t get_module_base(int pid, const char* module_name) {
-    uintptr_t addr = 0;
-    char maps_path[256]; 
-    snprintf(maps_path, sizeof(maps_path), "/proc/%d/maps", pid);
-    FILE* fp = fopen(maps_path, "r");
-    if (fp) {
-        char line[512]; 
-        while (fgets(line, sizeof(line), fp)) {
-            // البحث عن المسارات التنفيذية الرئيسية r-xp التي تحتوي على ملفات اللعبة أو مكتباتها
-            if (strstr(line, "r-xp") && (strstr(line, "lib") || strstr(line, "com.tencent.ig") || strstr(line, "/data/app"))) {
-                sscanf(line, "%lx", &addr);
-                if (addr > 0) {
-                    break;
-                }
-            }
-        }
-        fclose(fp);
-    }
-    return addr;
-}
-
 uintptr_t decrypt_gworld(uintptr_t encrypted_gworld) {
     if (!encrypted_gworld) return 0;
     uintptr_t key = encrypted_gworld ^ 0x5C2E7A4B9F1D8E30ULL; 
@@ -52,25 +30,11 @@ uintptr_t decrypt_gworld(uintptr_t encrypted_gworld) {
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, jint pid) {
-    if (pid <= 0) return nullptr;
+Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, jint pid, jlong base_address_java) {
+    if (pid <= 0 || base_address_java <= 0) return nullptr;
 
-    uintptr_t base_address = get_module_base(pid, "libUE4.so");
+    uintptr_t base_address = (uintptr_t)base_address_java;
     char status_buf[256] = {0};
-
-    if (!base_address) {
-        snprintf(status_buf, sizeof(status_buf), "PID: %d | WAITING FOR LIB...", pid);
-        jclass memoryUtilsClass = env->FindClass("com/muhgoub/hud/MemoryUtils");
-        if (memoryUtilsClass) {
-            jfieldID statusField = env->GetStaticFieldID(memoryUtilsClass, "nativeStatusMessage", "Ljava/lang/String;");
-            if (statusField) {
-                jstring statusStr = env->NewStringUTF(status_buf);
-                env->SetStaticObjectField(memoryUtilsClass, statusField, statusStr);
-                env->DeleteLocalRef(statusStr);
-            }
-        }
-        return nullptr;
-    }
 
     uintptr_t encrypted_gworld = Read<uintptr_t>(pid, base_address + Offsets::GWorld);
     uintptr_t gworld = decrypt_gworld(encrypted_gworld);
