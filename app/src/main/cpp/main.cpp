@@ -23,7 +23,7 @@ T Read(int pid, uintptr_t address) {
     return buffer;
 }
 
-// 🟢 تم ضبط حجم الـ buffers وإغلاق الحواصر القياسية هندسياً لمنع الفيلد
+// 🟢 تم تحديث الدالة هندسياً لتقنص أول عنوان تنفيذي مستقر للعبة وتتخطى قيد الأسماء الثابتة كلياً
 uintptr_t get_module_base(int pid, const char* module_name) {
     uintptr_t addr = 0;
     char maps_path[256]; 
@@ -32,10 +32,12 @@ uintptr_t get_module_base(int pid, const char* module_name) {
     if (fp) {
         char line[512]; 
         while (fgets(line, sizeof(line), fp)) {
-            // فحص شامل لجميع مكتبات المحرك الحية r-xp لتخطي تحديث 4.6.0
-            if ((strstr(line, "libUE4.so") || strstr(line, "libanogs.so") || strstr(line, "libshadowtracker")) && strstr(line, "r-xp")) {
+            // البحث عن المسارات التنفيذية الرئيسية r-xp التي تحتوي على ملفات اللعبة أو مكتباتها
+            if (strstr(line, "r-xp") && (strstr(line, "lib") || strstr(line, "com.tencent.ig") || strstr(line, "/data/app"))) {
                 sscanf(line, "%lx", &addr);
-                break;
+                if (addr > 0) {
+                    break;
+                }
             }
         }
         fclose(fp);
