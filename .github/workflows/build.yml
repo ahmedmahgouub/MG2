@@ -24,16 +24,21 @@ jobs:
       run: |
         if [ -f "gradlew" ]; then
           chmod +x gradlew
-        } else {
-          chmod +x app/gradlew || true
+        elif [ -f "app/gradlew" ]; then
+          chmod +x app/gradlew
+        else
+          echo "gradlew not found"
         fi
 
     - name: Build with Gradle
       run: |
         if [ -f "gradlew" ]; then
           ./gradlew assembleDebug
+        elif [ -f "app/gradlew" ]; then
+          cd app && ./gradlew assembleDebug
         else
-          ./gradlew assembleDebug || echo "Root build skipped"
+          echo "No gradlew found to build"
+          exit 1
         fi
 
     - name: Upload APK
