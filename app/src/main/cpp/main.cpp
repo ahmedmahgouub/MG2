@@ -4,14 +4,15 @@
 #include <unistd.h>
 #include <sys/uio.h>
 #include <sys/types.h>
-#include <dirent.h>
+#include <cstdio>
+#include <cstdlib>
 #include "Offsets.h"
 
 struct Vector3 {
     float x, y, z;
 };
 
-// دالة قراءة الذاكرة فائقة السرعة والمستقرة عبر المعالج بالروت (PID)
+// دالة قراءة الذاكرة فائقة السرعة والمستقرة عبر الروت
 template <typename T>
 T Read(int pid, uintptr_t address) {
     T buffer;
@@ -24,35 +25,23 @@ T Read(int pid, uintptr_t address) {
     return buffer;
 }
 
-// دالة C++ أصلية وقوية لقنص الـ PID مباشرة من الذاكرة وتخطي حظر أوامر النظام
-int find_pid_native(const char* process_name) {
-    DIR* dir = opendir("/proc");
-    if (!dir) return -1;
-    struct dirent* entry;
-    while ((entry = readdir(dir)) != nullptr) {
-        int id = atoi(entry->d_name);
-        if (id > 0) {
-            char cmdline_path[256];
-            snprintf(cmdline_path, sizeof(cmdline_path), "/proc/%d/cmdline", id);
-            FILE* fp = fopen(cmdline_path, "r");
-            if (fp) {
-                char cmdline[256] = {0};
-                if (fgets(cmdline, sizeof(cmdline), fp)) {
-                    if (strcmp(cmdline, process_name) == 0) {
-                        fclose(fp);
-                        closedir(dir);
-                        return id;
-                    }
-                }
-                fclose(fp);
-            }
-        }
+// دالة روت حاسمة تعتمد على popen لقنص الـ PID وتخطي حظر النظام
+int find_pid_root(const char* process_name) {
+    char cmd[128];
+    snprintf(cmd, sizeof(cmd), "pidof %s", process_name);
+    FILE* fp = popen(cmd, "r");
+    if (!fp) return -1;
+
+    char pid_str[32] = {0};
+    if (fgets(pid_str, sizeof(pid_str), fp) != nullptr) {
+        pclose(fp);
+        return atoi(pid_str);
     }
-    closedir(dir);
+    pclose(fp);
     return -1;
 }
 
-// دالة جلب عنوان الـ Base الـ 64 بت الطويل بدقة لمنع البتر والقطع طبقاً لكود صاحبك
+// دالة جلب الجيم بيز الـ 64 بت الطويل بدقة لمنع البتر والقطع طبقاً لكود صاحبك
 uintptr_t get_module_base(int pid, const char* module_name) {
     uintptr_t addr = 0;
     char maps_path[256]; 
@@ -62,6 +51,7 @@ uintptr_t get_module_base(int pid, const char* module_name) {
         char line[512]; 
         while (fgets(line, sizeof(line), fp)) {
             if (strstr(line, module_name) && strstr(line, "r-xp")) {
+                // استخدام %lx لقراءة كامل العنوان الـ 64 بت الطويل بنجاح
                 sscanf(line, "%lx", &addr);
                 break;
             }
@@ -80,8 +70,8 @@ uintptr_t decrypt_gworld(uintptr_t encrypted_gworld) {
 
 extern "C" JNIEXPORT jobjectArray JNICALL
 Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, jint pid_from_java) {
-    // قنص الـ PID داخلياً وبدقة عبر الـ C++ للنسخة العالمية com.tencent.ig لتفادي تعليقة الكوتلن
-    int pid = find_pid_native("com.tencent.ig");
+    // قنص الـ PID المباشر للنسخة العالميةcom.tencent.ig لتجاوز حظر النظام
+    int pid = find_pid_root("com.tencent.ig");
     
     char status_buf[256] = {0};
     
