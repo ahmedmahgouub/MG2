@@ -2,12 +2,10 @@
 <manifest xmlns:android="http://android.com"
     package="com.muhgoub.hud">
 
-    <!-- صلاحيات الذاكرة والروت والخدمة العائمة -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- تفعيل الاستعلام الشامل لتخطي حظر قراءة الـ PID للعبة -->
     <queries>
         <package android:name="com.tencent.ig" />
     </queries>
