@@ -1,164 +1,97 @@
-#include <jni.h>
-#include <string>
-#include <vector>
-#include <unistd.h>
-#include <sys/uio.h>
-#include <sys/types.h>
-#include <cstdio>
-#include <cstdlib>
-#include "Offsets.h"
+package com.muhgoub.hud
 
-struct Vector3 {
-    float x, y, z;
-};
+import java.io.File
+import java.io.FileInputStream
+import java.io.BufferedReader
+import java.io.InputStreamReader
 
-// دالة قراءة الذاكرة فائقة السرعة والمستقرة عبر الروت
-template <typename T>
-T Read(int pid, uintptr_t address) {
-    T buffer;
-    struct iovec local_io, remote_io;
-    local_io.iov_base = &buffer;
-    local_io.iov_len = sizeof(T);
-    remote_io.iov_base = reinterpret_cast<void*>(address);
-    remote_io.iov_len = sizeof(T);
-    process_vm_readv(pid, &local_io, 1, &remote_io, 1, 0);
-    return buffer;
-}
+object MemoryUtils {
 
-// دالة روت حاسمة تعتمد على popen لقنص الـ PID وتخطي حظر النظام
-int find_pid_root(const char* process_name) {
-    char cmd[128];
-    snprintf(cmd, sizeof(cmd), "pidof %s", process_name);
-    FILE* fp = popen(cmd, "r");
-    if (!fp) return -1;
+    @JvmStatic
+    var nativeStatusMessage: String = "WAITING FOR PUBG..."
 
-    char pid_str[32] = {0};
-    if (fgets(pid_str, sizeof(pid_str), fp) != nullptr) {
-        pclose(fp);
-        return atoi(pid_str);
-    }
-    pclose(fp);
-    return -1;
-}
-
-// دالة جلب الجيم بيز الـ 64 بت الطويل بدقة لمنع البتر والقطع طبقاً لكود صاحبك
-uintptr_t get_module_base(int pid, const char* module_name) {
-    uintptr_t addr = 0;
-    char maps_path[256]; 
-    snprintf(maps_path, sizeof(maps_path), "/proc/%d/maps", pid);
-    FILE* fp = fopen(maps_path, "r");
-    if (fp) {
-        char line[512]; 
-        while (fgets(line, sizeof(line), fp)) {
-            if (strstr(line, module_name) && strstr(line, "r-xp")) {
-                // استخدام %lx لقراءة كامل العنوان الـ 64 بت الطويل بنجاح
-                sscanf(line, "%lx", &addr);
-                break;
-            }
-        }
-        fclose(fp);
-    }
-    return addr;
-}
-
-// دالة فك تشفير عنوان الـ GWorld الحركي للنسخة العالمية
-uintptr_t decrypt_gworld(uintptr_t encrypted_gworld) {
-    if (!encrypted_gworld) return 0;
-    uintptr_t key = encrypted_gworld ^ 0x5C2E7A4B9F1D8E30ULL; 
-    return (key >> 16) | (key << 48); 
-}
-
-extern "C" JNIEXPORT jobjectArray JNICALL
-Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, jint pid_from_java) {
-    // قنص الـ PID المباشر للنسخة العالميةcom.tencent.ig لتجاوز حظر النظام
-    int pid = find_pid_root("com.tencent.ig");
-    
-    char status_buf[256] = {0};
-    
-    if (pid <= 0) {
-        jclass memoryUtilsClass = env->FindClass("com/muhgoub/hud/MemoryUtils");
-        if (memoryUtilsClass) {
-            jfieldID statusField = env->GetStaticFieldID(memoryUtilsClass, "nativeStatusMessage", "Ljava/lang/String;");
-            if (statusField) {
-                jstring statusStr = env->NewStringUTF("WAITING FOR PUBG...");
-                env->SetStaticObjectField(memoryUtilsClass, statusField, statusStr);
-                env->DeleteLocalRef(statusStr);
-            }
-        }
-        return nullptr;
+    init {
+        System.loadLibrary("hud_internal")
     }
 
-    uintptr_t base_address = get_module_base(pid, "libUE4.so");
-    if (!base_address) {
-        snprintf(status_buf, sizeof(status_buf), "PID: %d | WAITING FOR LIB...", pid);
-        jclass memoryUtilsClass = env->FindClass("com/muhgoub/hud/MemoryUtils");
-        if (memoryUtilsClass) {
-            jfieldID statusField = env->GetStaticFieldID(memoryUtilsClass, "nativeStatusMessage", "Ljava/lang/String;");
-            if (statusField) {
-                jstring statusStr = env->NewStringUTF(status_buf);
-                env->SetStaticObjectField(memoryUtilsClass, statusField, statusStr);
-                env->DeleteLocalRef(statusStr);
-            }
-        }
-        return nullptr;
-    }
+    @JvmStatic
+    external fun getPlayersLocations(pid: Int): Array<Vector3>?
 
-    uintptr_t encrypted_gworld = Read<uintptr_t>(pid, base_address + Offsets::GWorld);
-    uintptr_t gworld = decrypt_gworld(encrypted_gworld);
-    
-    std::vector<Vector3> temp_players;
-    int actor_count = 0;
+    const val OFFSET_GNAME: Long = 0xF08F820L
+    const val OFFSET_GWORLD: Long = 0xF624D40L
+    const val OFFSET_VIEW_WORLD: Long = 0xF5FBFD0L
+    const val OFFSET_UE4_POINTER: Long = 0xE0C36E0L
 
-    if (gworld) {
-        uintptr_t persistent_level = Read<uintptr_t>(pid, gworld + Offsets::PersistentLevel);
-        if (persistent_level) {
-            uintptr_t actor_array = Read<uintptr_t>(pid, persistent_level + Offsets::ActorArray);
-            actor_count = Read<int>(pid, persistent_level + Offsets::ActorCount);
+    const val OFFSET_PERSISTENT_LEVEL: Long = 0x30L
+    const val OFFSET_ACTOR_ARRAY: Long = 0xA0L  
+    const val OFFSET_ACTOR_COUNT: Long = 0xA8L  
+    const val OFFSET_ROOT_COMPONENT: Long = 0x208L
+    const val OFFSET_RELATIVE_LOCATION: Long = 0x1E4L
 
-            int max_actors = (actor_count > 800) ? 800 : actor_count;
+    data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
+    data class Vector3(val x: Float, val y: Float, val z: Float)
 
-            for (int i = 0; i < max_actors; i++) {
-                uintptr_t actor = Read<uintptr_t>(pid, actor_array + (i * 8));
-                if (!actor) continue;
-
-                uintptr_t root_component = Read<uintptr_t>(pid, actor + Offsets::RootComponent);
-                if (!root_component) continue;
-
-                Vector3 location = Read<Vector3>(pid, root_component + Offsets::RelativeLocation);
-                if (location.x != 0.0f && location.y != 0.0f) {
-                    temp_players.push_back(Vector3{location.x, location.y, location.z});
+    fun findProcessId(packageName: String): Int {
+        val procDir = File("/proc")
+        val files = procDir.listFiles() ?: return -1
+        for (file in files) {
+            if (file.isDirectory) {
+                val pid = file.name.toIntOrNull()
+                if (pid != null && pid > 0) {
+                    try {
+                        val cmdlineFile = File(file, "cmdline")
+                        if (cmdlineFile.exists()) {
+                            val stream = FileInputStream(cmdlineFile)
+                            val reader = BufferedReader(InputStreamReader(stream))
+                            val cmdline = reader.readLine()
+                            reader.close()
+                            stream.close()
+                            if (cmdline != null && cmdline.trim().startsWith(packageName)) {
+                                return pid
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // تخطي الملفات المحمية
+                    }
                 }
             }
         }
+        return -1
     }
 
-    if (gworld) {
-        snprintf(status_buf, sizeof(status_buf), "PID: %d | Base: 0x%lx | Players: %d", pid, base_address, (int)temp_players.size());
-    } else {
-        snprintf(status_buf, sizeof(status_buf), "PID: %d | Base: 0x%lx | In Lobby", pid, base_address);
-    }
-    
-    jclass memoryUtilsClass = env->FindClass("com/muhgoub/hud/MemoryUtils");
-    if (memoryUtilsClass) {
-        jfieldID statusField = env->GetStaticFieldID(memoryUtilsClass, "nativeStatusMessage", "Ljava/lang/String;");
-        if (statusField) {
-            jstring statusStr = env->NewStringUTF(status_buf);
-            env->SetStaticObjectField(memoryUtilsClass, statusField, statusStr);
-            env->DeleteLocalRef(statusStr);
+    fun getModuleBase(pid: Int, moduleName: String = "libUE4.so"): Long {
+        try {
+            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "cat /proc/$pid/maps"))
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            var line: String?
+            while (reader.readLine().also { line = it } != null) {
+                if (line!!.contains(moduleName) && line!!.contains("r-xp")) {
+                    val addrPart = line!!.substringBefore("-")
+                    return addrPart.toLong(16)
+                }
+            }
+            process.waitFor()
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
+        return 0L
     }
 
-    jclass vectorClass = env->FindClass("com/muhgoub/hud/MemoryUtils$Vector3");
-    if (!vectorClass) return nullptr;
-    
-    jmethodID constructor = env->GetMethodID(vectorClass, "<init>", "(FFF)V");
-    jobjectArray result = env->NewObjectArray(temp_players.size(), vectorClass, nullptr);
-    
-    for (size_t i = 0; i < temp_players.size(); i++) {
-        jobject vecObj = env->NewObject(vectorClass, constructor, temp_players[i].x, temp_players[i].y, temp_players[i].z);
-        env->SetObjectArrayElement(result, i, vecObj);
-        env->DeleteLocalRef(vecObj);
+    fun readMatrix(pid: Int, address: Long): FloatArray {
+        return FloatArray(16)
     }
-    
-    return result;
+
+    fun worldToScreen(worldLocation: Vector3, matrix: FloatArray, screenWidth: Int, screenHeight: Int): Point2D {
+        val matrixSize = 16
+        if (matrix.size < matrixSize) return Point2D(0f, 0f, false)
+        
+        val w = matrix[3] * worldLocation.x + matrix[7] * worldLocation.y + matrix[11] * worldLocation.z + matrix[15]
+        if (w < 0.01f) return Point2D(0f, 0f, false)
+
+        val invW = 1.0f / w
+        val x = screenWidth / 2 + (matrix[0] * worldLocation.x + matrix[4] * worldLocation.y + matrix[8] * worldLocation.z + matrix[12]) * invW * (screenWidth / 2)
+        val y = screenHeight / 2 - (matrix[1] * worldLocation.x + matrix[5] * worldLocation.y + matrix[9] * worldLocation.z + matrix[13]) * invW * (screenHeight / 2)
+
+        return Point2D(x, y, true)
+    }
 }
