@@ -15,6 +15,8 @@ class ESPView @JvmOverloads constructor(
 
     private var isRunning = false
     private var scope: CoroutineScope? = null
+    private var currentPid = -1
+    private val supportedPackages = arrayOf("com.tencent.ig")
     
     private var viewMatrix = FloatArray(16)
     private val playerList = mutableListOf<MemoryUtils.Vector3>()
@@ -49,20 +51,33 @@ class ESPView @JvmOverloads constructor(
         scope = CoroutineScope(Dispatchers.Default + Job())
         scope?.launch {
             while (isRunning) {
-                // استدعاء مباشر ودائم لدالة الـ C++ وهي التي تتولى قنص الـ PID داخلياً بأمان وبدون تعليق الكوتلن
-                val nativePlayers = MemoryUtils.getPlayersLocations(1)
-                val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
-
-                if (nativePlayers != null) {
-                    tempPlayers.addAll(nativePlayers)
-                }
-
-                synchronized(playerList) {
-                    playerList.clear()
-                    playerList.addAll(tempPlayers)
+                currentPid = -1
+                for (pkg in supportedPackages) {
+                    val pid = MemoryUtils.findProcessId(pkg)
+                    if (pid != -1) {
+                        currentPid = pid
+                        break
+                    }
                 }
                 
-                statusMessage = MemoryUtils.nativeStatusMessage
+                if (currentPid != -1) {
+                    // تصفية وتمرير الـ PID الحقيقي الصافي لدالة الـ C++ دون تعليق
+                    val nativePlayers = MemoryUtils.getPlayersLocations(currentPid)
+                    val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
+
+                    if (nativePlayers != null) {
+                        tempPlayers.addAll(nativePlayers)
+                    }
+
+                    synchronized(playerList) {
+                        playerList.clear()
+                        playerList.addAll(tempPlayers)
+                    }
+                    
+                    statusMessage = MemoryUtils.nativeStatusMessage
+                } else {
+                    statusMessage = "WAITING FOR PUBG..."
+                }
 
                 withContext(Dispatchers.Main) {
                     invalidate()
