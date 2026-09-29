@@ -22,22 +22,24 @@ jobs:
 
     - name: Grant execute permission for gradlew
       run: |
-        if [ -f "gradlew" ]; then
-          chmod +x gradlew
-        elif [ -f "app/gradlew" ]; then
-          chmod +x app/gradlew
+        GRADLEW_PATH=$(find . -name "gradlew" -print -quit)
+        if [ ! -z "$GRADLEW_PATH" ]; then
+          chmod +x "$GRADLEW_PATH"
+          echo "Found and configured gradlew at: $GRADLEW_PATH"
         else
-          echo "gradlew not found"
+          echo "Error: gradlew not found anywhere in the repository"
+          exit 1
         fi
 
     - name: Build with Gradle
       run: |
-        if [ -f "gradlew" ]; then
+        GRADLEW_PATH=$(find . -name "gradlew" -print -quit)
+        if [ ! -z "$GRADLEW_PATH" ]; then
+          MODULE_DIR=$(dirname "$GRADLEW_PATH")
+          cd "$MODULE_DIR"
           ./gradlew assembleDebug
-        elif [ -f "app/gradlew" ]; then
-          cd app && ./gradlew assembleDebug
         else
-          echo "No gradlew found to build"
+          echo "Error: No gradlew found to build"
           exit 1
         fi
 
