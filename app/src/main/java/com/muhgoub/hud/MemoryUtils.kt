@@ -1,7 +1,5 @@
 package com.muhgoub.hud
 
-import java.io.File
-import java.io.FileInputStream
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
@@ -31,41 +29,21 @@ object MemoryUtils {
     data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
     data class Vector3(val x: Float, val y: Float, val z: Float)
 
-    // 🟢 تم دمج طلب روت صريح ومؤمن لإجبار النظام على إظهار نافذة الصلاحية فوراً
+    // 🟢 رجعنا للدالة القديمة المضمونة السهلة اللي كانت بتقفش اللعبة في جهازك علطول بدون تعليق
     fun findProcessId(packageName: String): Int {
+        var pid = -1
         try {
-            // سطر إجباري لطلب الروت من KernelSU لضمان تخطي جدار الحماية
-            val rootCheck = Runtime.getRuntime().exec(arrayOf("su", "-c", "id"))
-            rootCheck.waitFor()
+            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "pidof $packageName"))
+            val reader = BufferedReader(InputStreamReader(process.inputStream))
+            val line = reader.readLine()
+            if (!line.isNullOrEmpty()) {
+                pid = line.trim().toInt()
+            }
+            process.waitFor()
         } catch (e: Exception) {
             e.printStackTrace()
         }
-
-        val procDir = File("/proc")
-        val files = procDir.listFiles() ?: return -1
-        for (file in files) {
-            if (file.isDirectory) {
-                val pid = file.name.toIntOrNull()
-                if (pid != null && pid > 0) {
-                    try {
-                        val cmdlineFile = File(file, "cmdline")
-                        if (cmdlineFile.exists()) {
-                            val stream = FileInputStream(cmdlineFile)
-                            val reader = BufferedReader(InputStreamReader(stream))
-                            val cmdline = reader.readLine()
-                            reader.close()
-                            stream.close()
-                            if (cmdline != null && cmdline.trim().startsWith(packageName)) {
-                                return pid
-                            }
-                        }
-                    } catch (e: Exception) {
-                        // تخطي الملفات الأمنية المعزولة
-                    }
-                }
-            }
-        }
-        return -1
+        return pid
     }
 
     fun getModuleBase(pid: Int, moduleName: String = "libUE4.so"): Long {
