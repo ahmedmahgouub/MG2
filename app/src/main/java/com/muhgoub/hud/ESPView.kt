@@ -61,6 +61,14 @@ class ESPView @JvmOverloads constructor(
                 }
                 
                 if (currentPid != -1) {
+                    val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
+                    if (libBase != 0L) {
+                        val tempMatrix = MemoryUtils.readMatrix(currentPid, libBase + MemoryUtils.OFFSET_VIEW_WORLD)
+                        if (tempMatrix.isNotEmpty() && tempMatrix.size == 16) {
+                            viewMatrix = tempMatrix
+                        }
+                    }
+
                     val nativePlayers = MemoryUtils.getPlayersLocations(currentPid)
                     val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
 
