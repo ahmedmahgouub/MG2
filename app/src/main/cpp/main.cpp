@@ -4,13 +4,14 @@
 #include <unistd.h>
 #include <sys/uio.h>
 #include <sys/types.h>
+#include <dirent.h>
 #include "Offsets.h"
 
 struct Vector3 {
     float x, y, z;
 };
 
-// دالة قراءة الذاكرة فائقة السرعة والمستقرة عبر الروت
+// دالة قراءة الذاكرة فائقة السرعة والمستقرة عبر المعالج بالروت (PID)
 template <typename T>
 T Read(int pid, uintptr_t address) {
     T buffer;
@@ -23,7 +24,35 @@ T Read(int pid, uintptr_t address) {
     return buffer;
 }
 
-// دالة جلب عنوان الـ Base الـ 64 بت الطويل بدقة لمنع البتر والقطع
+// دالة C++ أصلية وقوية لقنص الـ PID مباشرة من الذاكرة وتخطي حظر أوامر النظام
+int find_pid_native(const char* process_name) {
+    DIR* dir = opendir("/proc");
+    if (!dir) return -1;
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        int id = atoi(entry->d_name);
+        if (id > 0) {
+            char cmdline_path[256];
+            snprintf(cmdline_path, sizeof(cmdline_path), "/proc/%d/cmdline", id);
+            FILE* fp = fopen(cmdline_path, "r");
+            if (fp) {
+                char cmdline[256] = {0};
+                if (fgets(cmdline, sizeof(cmdline), fp)) {
+                    if (strcmp(cmdline, process_name) == 0) {
+                        fclose(fp);
+                        closedir(dir);
+                        return id;
+                    }
+                }
+                fclose(fp);
+            }
+        }
+    }
+    closedir(dir);
+    return -1;
+}
+
+// دالة جلب عنوان الـ Base الـ 64 بت الطويل بدقة لمنع البتر والقطع طبقاً لكود صاحبك
 uintptr_t get_module_base(int pid, const char* module_name) {
     uintptr_t addr = 0;
     char maps_path[256]; 
@@ -50,16 +79,41 @@ uintptr_t decrypt_gworld(uintptr_t encrypted_gworld) {
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
-Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, jint pid) {
-    if (pid <= 0) return nullptr;
+Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, jint pid_from_java) {
+    // قنص الـ PID داخلياً وبدقة عبر الـ C++ للنسخة العالمية com.tencent.ig لتفادي تعليقة الكوتلن
+    int pid = find_pid_native("com.tencent.ig");
+    
+    char status_buf[256] = {0};
+    
+    if (pid <= 0) {
+        jclass memoryUtilsClass = env->FindClass("com/muhgoub/hud/MemoryUtils");
+        if (memoryUtilsClass) {
+            jfieldID statusField = env->GetStaticFieldID(memoryUtilsClass, "nativeStatusMessage", "Ljava/lang/String;");
+            if (statusField) {
+                jstring statusStr = env->NewStringUTF("WAITING FOR PUBG...");
+                env->SetStaticObjectField(memoryUtilsClass, statusField, statusStr);
+                env->DeleteLocalRef(statusStr);
+            }
+        }
+        return nullptr;
+    }
 
     uintptr_t base_address = get_module_base(pid, "libUE4.so");
-    if (!base_address) return nullptr;
+    if (!base_address) {
+        snprintf(status_buf, sizeof(status_buf), "PID: %d | WAITING FOR LIB...", pid);
+        jclass memoryUtilsClass = env->FindClass("com/muhgoub/hud/MemoryUtils");
+        if (memoryUtilsClass) {
+            jfieldID statusField = env->GetStaticFieldID(memoryUtilsClass, "nativeStatusMessage", "Ljava/lang/String;");
+            if (statusField) {
+                jstring statusStr = env->NewStringUTF(status_buf);
+                env->SetStaticObjectField(memoryUtilsClass, statusField, statusStr);
+                env->DeleteLocalRef(statusStr);
+            }
+        }
+        return nullptr;
+    }
 
-    // 1. قراءة الـ GWorld المشفر
     uintptr_t encrypted_gworld = Read<uintptr_t>(pid, base_address + Offsets::GWorld);
-    
-    // 2. تطبيق فك التشفير الحركي لإصلاح العنوان
     uintptr_t gworld = decrypt_gworld(encrypted_gworld);
     
     std::vector<Vector3> temp_players;
@@ -88,8 +142,6 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
         }
     }
 
-    // تصحيح حجم مصفوفة النص الثنائية لحظر مشكلة الكراش
-    char status_buf[256];
     if (gworld) {
         snprintf(status_buf, sizeof(status_buf), "PID: %d | Base: 0x%lx | Players: %d", pid, base_address, (int)temp_players.size());
     } else {
