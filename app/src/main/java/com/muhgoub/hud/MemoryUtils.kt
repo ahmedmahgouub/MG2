@@ -12,8 +12,9 @@ object MemoryUtils {
         System.loadLibrary("hud_internal")
     }
 
+    // 🟢 تم تحديث الدالة الخارجية لتستقبل الـ Base Address كـ Long وتمرره للـ C++
     @JvmStatic
-    external fun getPlayersLocations(pid: Int): Array<Vector3>?
+    external fun getPlayersLocations(pid: Int, baseAddress: Long): Array<Vector3>?
 
     const val OFFSET_GNAME: Long = 0xF08F820L
     const val OFFSET_GWORLD: Long = 0xF624D40L
@@ -29,7 +30,6 @@ object MemoryUtils {
     data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
     data class Vector3(val x: Float, val y: Float, val z: Float)
 
-    // 🟢 رجعنا للدالة القديمة المضمونة السهلة اللي كانت بتقفش اللعبة في جهازك علطول بدون تعليق
     fun findProcessId(packageName: String): Int {
         var pid = -1
         try {
@@ -46,13 +46,15 @@ object MemoryUtils {
         return pid
     }
 
+    // دالة جلب الـ Base المضمونة من خرائط النظام عبر الـ cat والـ 64 بت الصافية
     fun getModuleBase(pid: Int, moduleName: String = "libUE4.so"): Long {
         try {
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "cat /proc/$pid/maps"))
             val reader = BufferedReader(InputStreamReader(process.inputStream))
             var line: String?
             while (reader.readLine().also { line = it } != null) {
-                if (line!!.contains(moduleName) && line!!.contains("r-xp")) {
+                // فحص شامل للمكتبات التنفيذية لتجاوز تحديث 4.6.0
+                if ((line!!.contains("libUE4.so") || line!!.contains("libanogs.so") || line!!.contains("libshadowtracker")) && line!!.contains("r-xp")) {
                     val addrPart = line!!.substringBefore("-")
                     return addrPart.toLong(16)
                 }
