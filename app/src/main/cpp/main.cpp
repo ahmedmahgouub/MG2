@@ -26,7 +26,7 @@ T Read(int pid, uintptr_t address) {
 uintptr_t get_module_base_and_size(int pid, const char* module_name, size_t &size) {
     uintptr_t addr = 0;
     size = 0;
-    char maps_path[64]; 
+    char maps_path[256]; 
     snprintf(maps_path, sizeof(maps_path), "/proc/%d/maps", pid);
     FILE* fp = fopen(maps_path, "r");
     if (fp) {
@@ -79,10 +79,9 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
     uintptr_t base_address = get_module_base_and_size(pid, "libUE4.so", module_size);
     if (!base_address || module_size == 0) return nullptr;
 
-    // 1. بصمة الـ Hex القياسية للمحرك 64 بت للبحث عن الـ GEngine ديناميكياً
-    // التوقيع يبحث عن كود الآلة الافتراضي للـ ViewportClient وتوجيهات المحرك
-    const char* gengine_pattern = "\x7F\x45\x4C\x46\x02\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00"; 
-    const char* gengine_mask    = "xxxx????????xxxx"; // علامات الاستفهام للبايتات الحركية المتغيرة
+    // 🟢 البصمة المحدثة والدقيقة لقنص مسجلات الـ ADRP الخاصة بـ GEngine للـ 64 بت
+    const char* gengine_pattern = "\x00\x00\x00\x90\x00\x00\x40\xF9\x00\x00\x00\x91\xE0\x03\x13\xAA"; 
+    const char* gengine_mask    = "?x?x?x?x?x?x?xxx"; 
     
     uintptr_t gengine_ptr = scan_pattern(pid, base_address, module_size, gengine_pattern, gengine_mask);
     if (!gengine_ptr) return nullptr;
@@ -90,7 +89,7 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
     uintptr_t gengine = Read<uintptr_t>(pid, gengine_ptr);
     if (!gengine) return nullptr;
 
-    // 2. الانتقال الداخلي الآمن داخل الهيكل البنائي للمحرك
+    // الانتقال الداخلي الآمن داخل الهيكل البنائي للمحرك
     uintptr_t game_viewport = Read<uintptr_t>(pid, gengine + 0x780); // GameViewportClient = 0x780
     if (!game_viewport) return nullptr;
 
@@ -115,7 +114,7 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
 
         Vector3 location = Read<Vector3>(pid, root_component + 0x1E4); // RelativeLocation = 0x1E4
         if (location.x != 0.0f && location.y != 0.0f) {
-            temp_players.push_back(location);
+            temp_players.push_back(Vector3{location.x, location.y, location.z});
         }
     }
 
