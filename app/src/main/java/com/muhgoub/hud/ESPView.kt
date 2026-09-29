@@ -61,7 +61,6 @@ class ESPView @JvmOverloads constructor(
                 }
                 
                 if (currentPid != -1) {
-                    // تصفية وتمرير الـ PID الحقيقي الصافي لدالة الـ C++ دون تعليق
                     val nativePlayers = MemoryUtils.getPlayersLocations(currentPid)
                     val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
 
