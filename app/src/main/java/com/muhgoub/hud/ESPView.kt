@@ -69,15 +69,12 @@ class ESPView @JvmOverloads constructor(
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        // 1. قراءة مصفوفة الإسقاط وتأمين الشرط هندسياً لمنع خطأ البناء الأحمر
                         val tempMatrix = MemoryUtils.readMatrix(currentPid, libBase + MemoryUtils.OFFSET_VIEW_WORLD)
-                        
-                        // تم تصحيح الشرط برمجياً ليفحص الحجم بدقة بدون مقارنة فلوت خاطئة
                         if (tempMatrix.isNotEmpty() && tempMatrix.size == 16) {
                             viewMatrix = tempMatrix
                         }
                         
-                        // 2. استدعاء محرك الاختبار المباشر من الـ C++
+                        // استدعاء محرك الـ C++ المطور فائق السرعة
                         val nativePlayers = MemoryUtils.getPlayersLocations(currentPid)
                         val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
 
@@ -90,7 +87,8 @@ class ESPView @JvmOverloads constructor(
                             playerList.addAll(tempPlayers)
                         }
                         
-                        statusMessage = "PID: $currentPid | Engine: C++ Active | Players: ${tempPlayers.size}"
+                        // 🟢 قراءة الرسالة الحية المحدثة من الـ C++ مباشرة لعرض الـ Base والعنوان الطويل
+                        statusMessage = MemoryUtils.nativeStatusMessage
                     } else {
                         statusMessage = "PID: $currentPid | WAITING FOR LIB..."
                     }
@@ -114,6 +112,7 @@ class ESPView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        // رسم شريط الحالة المحترف أعلى اليسار
         canvas.drawText(statusMessage, 30f, 120f, textPaint)
 
         synchronized(playerList) {
