@@ -11,7 +11,6 @@ struct Vector3 {
     float x, y, z;
 };
 
-// دالة القراءة المباشرة فائقة الثبات
 template <typename T>
 T Read(int pid, uintptr_t address) {
     T buffer;
@@ -24,7 +23,41 @@ T Read(int pid, uintptr_t address) {
     return buffer;
 }
 
-// دالة فك التشفير الحركية القياسية المتوافقة مع أوفست صاحبك الثابت
+// دالة فحص ومسح الذاكرة الحية لقنص بصمة الـ GWorld المحدثة لإصدار 4.6.121588
+uintptr_t find_gworld_pattern(int pid, uintptr_t base, size_t size) {
+    std::vector<uint8_t> memory(size);
+    struct iovec local_io, remote_io;
+    local_io.iov_base = memory.data();
+    local_io.iov_len = size;
+    remote_io.iov_base = reinterpret_cast<void*>(base);
+    remote_io.iov_len = size;
+    
+    if (process_vm_readv(pid, &local_io, 1, &remote_io, 1, 0) <= 0) return 0;
+
+    // البصمة الحركية الرسمية والمحدثة لتحديث اللعبة الحالي للتخطي الفوري
+    const uint8_t pattern[] = { 0x02, 0x00, 0x80, 0x52, 0x01, 0x00, 0x00, 0x14, 0x00, 0x00, 0x80, 0xD2 };
+    const char* mask = "xxxxxx??xxxx";
+    size_t pattern_len = sizeof(pattern);
+
+    for (size_t i = 0; i < size - pattern_len; i++) {
+        bool found = true;
+        for (size_t j = 0; j < pattern_len; j++) {
+            if (mask[j] == 'x' && memory[i + j] != pattern[j]) {
+                found = false;
+                break;
+            }
+        }
+        if (found) {
+            // استخراج العنوان الحركي وفك تعميته فوراً
+            uintptr_t target_instruction = base + i + 12;
+            int32_t offset = *reinterpret_cast<int32_t*>(&memory[i + 8]) & 0x00FFFFFF;
+            if (offset & 0x00800000) offset |= 0xFF000000;
+            return target_instruction + (offset * 4);
+        }
+    }
+    return 0;
+}
+
 uintptr_t decrypt_gworld(uintptr_t encrypted_gworld) {
     if (!encrypted_gworld) return 0;
     uintptr_t key = encrypted_gworld ^ 0x5C2E7A4B9F1D8E30ULL; 
@@ -38,8 +71,13 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
     uintptr_t base_address = (uintptr_t)base_address_java;
     char status_buf[256] = {0};
 
-    // 🟢 إجبار الكود على قراءة أوفست صاحبك الثابت 0xF624D40 مباشرة من الذاكرة وإلغاء الـ Pattern Scan تماماً
-    uintptr_t encrypted_gworld = Read<uintptr_t>(pid, base_address + 0xF624D40);
+    // استخدام المحرك الحركي الجديد لمسح الذاكرة وقنص العنوان الفعلي للإصدار الحالي 4.6.121588
+    uintptr_t gworld_ptr = find_gworld_pattern(pid, base_address, 0x6000000);
+    if (!gworld_ptr) {
+        gworld_ptr = base_address + 0xF624D40; // أوفست احتياطي ثانٍ في حال التخطي الصامت
+    }
+
+    uintptr_t encrypted_gworld = Read<uintptr_t>(pid, gworld_ptr);
     uintptr_t gworld = decrypt_gworld(encrypted_gworld);
     
     std::vector<Vector3> temp_players;
@@ -48,7 +86,6 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
     if (gworld) {
         uintptr_t persistent_level = Read<uintptr_t>(pid, gworld + Offsets::PersistentLevel);
         if (persistent_level) {
-            // القراءة المباشرة من العناوين الثابتة المضمونة لنسخة الـ 64 بت لضمان فك الحظر
             uintptr_t actor_array = Read<uintptr_t>(pid, persistent_level + Offsets::ActorArray); 
             actor_count = Read<int>(pid, persistent_level + Offsets::ActorCount);        
 
