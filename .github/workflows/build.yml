@@ -26,9 +26,9 @@ jobs:
         if [ ! -z "$GRADLEW_PATH" ]; then
           MODULE_DIR=$(dirname "$GRADLEW_PATH")
           cd "$MODULE_DIR"
-          gradle wrapper --gradle-version 8.4
+          gradle wrapper --gradle-version 8.7
         else
-          gradle wrapper --gradle-version 8.4
+          gradle wrapper --gradle-version 8.7
         fi
 
     - name: Grant execute permission for gradlew
