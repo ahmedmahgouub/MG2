@@ -24,24 +24,29 @@ T Read(int pid, uintptr_t address) {
     return buffer;
 }
 
+uintptr_t decrypt_gworld(uintptr_t encrypted_gworld) {
+    if (!encrypted_gworld) return 0;
+    uintptr_t key = encrypted_gworld ^ 0x5C2E7A4B9F1D8E30ULL; 
+    return (key >> 16) | (key << 48); 
+}
+
 extern "C" JNIEXPORT jobjectArray JNICALL
 Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, jint pid, jlong base_address_java) {
     if (pid <= 0 || base_address_java <= 0) return nullptr;
 
     uintptr_t base_address = (uintptr_t)base_address_java;
     
-    char status_buf[256];
+    char status_buf;
     memset(status_buf, 0, sizeof(status_buf));
 
     std::vector<Vector3> temp_players;
 
-    // قراءة عنوان الـ GWorld الصافي مباشرة
-    uintptr_t gworld = Read<uintptr_t>(pid, base_address + 0xF624D40);
+    uintptr_t encrypted_gworld = Read<uintptr_t>(pid, base_address + 0xF624D40);
+    uintptr_t gworld = decrypt_gworld(encrypted_gworld);
 
-    if (gworld > 0) {
-        uintptr_t persistent_level = Read<uintptr_t>(pid, gworld + 0x30); // PersistentLevel
+    if (gworld) {
+        uintptr_t persistent_level = Read<uintptr_t>(pid, gworld + 0x30);
         if (persistent_level) {
-            // 🟢 تم التحديث لأحدث أوفستات مصفوفة الكائنات والعداد لنسخة الـ 64 بت الحالية لكسر الـ WAITING
             uintptr_t actor_array = Read<uintptr_t>(pid, persistent_level + 0x98); 
             int actor_count = Read<int>(pid, persistent_level + 0xA0);        
 
@@ -52,10 +57,10 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
                     uintptr_t actor = Read<uintptr_t>(pid, actor_array + (i * 8));
                     if (!actor) continue;
 
-                    uintptr_t root_component = Read<uintptr_t>(pid, actor + 0x208); // RootComponent
+                    uintptr_t root_component = Read<uintptr_t>(pid, actor + 0x208);
                     if (!root_component) continue;
 
-                    Vector3 location = Read<Vector3>(pid, root_component + 0x1E4); // RelativeLocation
+                    Vector3 location = Read<Vector3>(pid, root_component + 0x1E4);
                     
                     if (location.x != 0.0f && location.y != 0.0f) {
                         temp_players.push_back(Vector3{location.x, location.y, location.z});
@@ -65,11 +70,10 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
         }
     }
 
-    // تحديث شريط الحالة ديناميكياً وبأمان بناءً على البيانات المقروءة حياً
     if (gworld && !temp_players.empty()) {
         snprintf(status_buf, sizeof(status_buf), "PID: %d | Base: 0x%lx | Players: %d", pid, base_address, (int)temp_players.size());
     } else if (gworld) {
-        snprintf(status_buf, sizeof(status_buf), "PID: %d | Base: 0x%lx | GWorld Found", pid, base_address);
+        snprintf(status_buf, sizeof(status_buf), "PID: %d | Base: 0x%lx | GWorld Active", pid, base_address);
     } else {
         snprintf(status_buf, sizeof(status_buf), "PID: %d | Base: 0x%lx | WAITING DATA...", pid, base_address);
     }
