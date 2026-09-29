@@ -4,14 +4,14 @@ plugins {
 }
 
 android {
-    // 🟢 السطر الجذري البديل الذي ينهي تضارب الحزم مع الـ Manifest نهائياً
+    // 🟢 الاسم والمسار مطابق 100% لملفات الكوتلن والجافا في السورس القديم
     namespace 'com.muhgoub.hud'
-    compileSdk 34
+    compileSdk 33
 
     defaultConfig {
         applicationId "com.muhgoub.hud"
         minSdk 24
-        targetSdk 34
+        targetSdk 33 // 🟢 تنزيل الإصدار المستهدف لحماية الرادار على أندرويد 16 حياً
         versionCode 1
         versionName "1.0"
 
@@ -49,9 +49,9 @@ android {
 }
 
 dependencies {
-    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.core:core-ktx:1.9.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.10.0'
+    implementation 'com.google.android.material:material:1.9.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4'
 }
