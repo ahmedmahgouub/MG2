@@ -64,7 +64,6 @@ class ESPView @JvmOverloads constructor(
                     val libBase = MemoryUtils.getModuleBase(currentPid, "libUE4.so")
                     
                     if (libBase != 0L) {
-                        // 🟢 نقوم بتمرير الـ currentPid والـ libBase المستخرجة من الكوتلن مباشرة للـ C++
                         val nativePlayers = MemoryUtils.getPlayersLocations(currentPid, libBase)
                         val tempPlayers = mutableListOf<MemoryUtils.Vector3>()
 
@@ -76,7 +75,6 @@ class ESPView @JvmOverloads constructor(
                             playerList.clear()
                             playerList.addAll(tempPlayers)
                         }
-                        
                         statusMessage = MemoryUtils.nativeStatusMessage
                     } else {
                         statusMessage = "PID: $currentPid | WAITING FOR LIB..."
