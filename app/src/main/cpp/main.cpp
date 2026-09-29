@@ -23,7 +23,7 @@ T Read(int pid, uintptr_t address) {
     return buffer;
 }
 
-// 🟢 محرك المسح الديناميكي الشامل لقنص بصمة الـ GWorld الحية من قلب الذاكرة بدون أوفستات ثابتة
+// محرك المسح الديناميكي الشامل لقنص بصمة الـ GWorld الحية من قلب الذاكرة بدون أوفستات ثابتة
 uintptr_t scan_gworld_dynamic(int pid, uintptr_t base_address, size_t search_size) {
     std::vector<uint8_t> memory_buffer(search_size);
     struct iovec local_io, remote_io;
@@ -34,7 +34,6 @@ uintptr_t scan_gworld_dynamic(int pid, uintptr_t base_address, size_t search_siz
 
     if (process_vm_readv(pid, &local_io, 1, &remote_io, 1, 0) <= 0) return 0;
 
-    // البصمة الفولاذية المحدثة لمحرك 64 بت القياسي المفتوح للتخطي الفوري وعزل الحماية
     const uint8_t signature[] = { 0x02, 0x00, 0x80, 0x52, 0x01, 0x00, 0x00, 0x14, 0x00, 0x00, 0x80, 0xD2 };
     const char* mask = "xxxxxx??xxxx";
     size_t sig_len = sizeof(signature);
@@ -48,7 +47,6 @@ uintptr_t scan_gworld_dynamic(int pid, uintptr_t base_address, size_t search_siz
             }
         }
         if (match) {
-            // حساب العنوان الحقيقي حركياً بناءً على إزاحة بايتات المحرك الحية
             uintptr_t instruction_addr = base_address + i + 12;
             int32_t relative_offset = *reinterpret_cast<int32_t*>(&memory_buffer[i + 8]) & 0x00FFFFFF;
             if (relative_offset & 0x00800000) relative_offset |= 0xFF000000;
@@ -69,12 +67,13 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
     if (pid <= 0 || base_address_java <= 0) return nullptr;
 
     uintptr_t base_address = (uintptr_t)base_address_java;
-    char status_buf = {0};
+    
+    // 🟢 تم تصحيح تعريف الـ buffer ليكون مصفوفة نصوص متكاملة لمنع خطأ التجميع نهائياً
+    char status_buf[256];
+    memset(status_buf, 0, sizeof(status_buf));
 
-    // استدعاء محرك المسح الديناميكي لمسح 96 ميجا بايت من الذاكرة الحية وقنص العنوان الحقيقي فوراً
     uintptr_t gworld_address = scan_gworld_dynamic(pid, base_address, 0x6000000);
     
-    // خط دفاع احتياطي صلب إذا تأخر المسح الحركي في ساحة الانتظار لضمان عدم حدوث تعليقة
     if (!gworld_address) {
         gworld_address = base_address + 0xF624D40; 
     }
