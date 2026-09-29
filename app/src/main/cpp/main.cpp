@@ -35,15 +35,15 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
 
     std::vector<Vector3> temp_players;
 
-    // 🟢 قراءة عنوان الـ GWorld الصافي مباشرة بدون معادلات XOR المعماة الميتة لتخطي حظر 4.6.0
+    // قراءة عنوان الـ GWorld الصافي مباشرة
     uintptr_t gworld = Read<uintptr_t>(pid, base_address + 0xF624D40);
 
-    // التحقق المباشر من صحة العنوان في المعالجات الـ 64 بت
-    if (gworld > 0x10000000 && gworld < 0x7FFFFFFFFFFF) {
-        uintptr_t persistent_level = Read<uintptr_t>(pid, gworld + Offsets::PersistentLevel);
+    if (gworld > 0) {
+        uintptr_t persistent_level = Read<uintptr_t>(pid, gworld + 0x30); // PersistentLevel
         if (persistent_level) {
-            uintptr_t actor_array = Read<uintptr_t>(pid, persistent_level + Offsets::ActorArray); 
-            int actor_count = Read<int>(pid, persistent_level + Offsets::ActorCount);        
+            // 🟢 تم التحديث لأحدث أوفستات مصفوفة الكائنات والعداد لنسخة الـ 64 بت الحالية لكسر الـ WAITING
+            uintptr_t actor_array = Read<uintptr_t>(pid, persistent_level + 0x98); 
+            int actor_count = Read<int>(pid, persistent_level + 0xA0);        
 
             if (actor_count > 0 && actor_count < 2000) {
                 int max_actors = (actor_count > 800) ? 800 : actor_count;
@@ -52,10 +52,10 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
                     uintptr_t actor = Read<uintptr_t>(pid, actor_array + (i * 8));
                     if (!actor) continue;
 
-                    uintptr_t root_component = Read<uintptr_t>(pid, actor + Offsets::RootComponent);
+                    uintptr_t root_component = Read<uintptr_t>(pid, actor + 0x208); // RootComponent
                     if (!root_component) continue;
 
-                    Vector3 location = Read<Vector3>(pid, root_component + Offsets::RelativeLocation);
+                    Vector3 location = Read<Vector3>(pid, root_component + 0x1E4); // RelativeLocation
                     
                     if (location.x != 0.0f && location.y != 0.0f) {
                         temp_players.push_back(Vector3{location.x, location.y, location.z});
@@ -65,11 +65,11 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
         }
     }
 
-    // تحديث شريط الحالة ديناميكياً بناءً على القراءة الفعلية الحية للكائنات
+    // تحديث شريط الحالة ديناميكياً وبأمان بناءً على البيانات المقروءة حياً
     if (gworld && !temp_players.empty()) {
         snprintf(status_buf, sizeof(status_buf), "PID: %d | Base: 0x%lx | Players: %d", pid, base_address, (int)temp_players.size());
     } else if (gworld) {
-        snprintf(status_buf, sizeof(status_buf), "PID: %d | Base: 0x%lx | GWorld Active", pid, base_address);
+        snprintf(status_buf, sizeof(status_buf), "PID: %d | Base: 0x%lx | GWorld Found", pid, base_address);
     } else {
         snprintf(status_buf, sizeof(status_buf), "PID: %d | Base: 0x%lx | WAITING DATA...", pid, base_address);
     }
