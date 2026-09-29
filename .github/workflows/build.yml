@@ -26,10 +26,10 @@ jobs:
         if [ ! -z "$GRADLEW_PATH" ]; then
           MODULE_DIR=$(dirname "$GRADLEW_PATH")
           cd "$MODULE_DIR"
-          # أمر سحري لتوليد الـ Jar الناقص تلقائياً من ملفات النظام الصافية
-          gradle wrapper --gradle-version 8.4
+          # 🟢 ترقية إصدار التوليد تلقائياً إلى 8.7 ليتوافق مع الـ build.gradle وينسف خطأ التضارب
+          gradle wrapper --gradle-version 8.7
         else
-          gradle wrapper --gradle-version 8.4
+          gradle wrapper --gradle-version 8.7
         fi
 
     - name: Grant execute permission for gradlew
