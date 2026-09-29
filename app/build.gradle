@@ -4,14 +4,13 @@ plugins {
 }
 
 android {
-    // 🟢 الاسم والمسار مطابق 100% لملفات الكوتلن والجافا في السورس القديم
     namespace 'com.muhgoub.hud'
     compileSdk 33
 
     defaultConfig {
         applicationId "com.muhgoub.hud"
         minSdk 24
-        targetSdk 33 // 🟢 تنزيل الإصدار المستهدف لحماية الرادار على أندرويد 16 حياً
+        targetSdk 33 // تثبيت التوافق على أندرويد 13 لإنهاء كراشات الذاكرة حياً
         versionCode 1
         versionName "1.0"
 
