@@ -12,20 +12,8 @@ object MemoryUtils {
         System.loadLibrary("hud_internal")
     }
 
-    // 🟢 تم تحديث الدالة الخارجية لتستقبل الـ Base Address كـ Long وتمرره للـ C++
     @JvmStatic
     external fun getPlayersLocations(pid: Int, baseAddress: Long): Array<Vector3>?
-
-    const val OFFSET_GNAME: Long = 0xF08F820L
-    const val OFFSET_GWORLD: Long = 0xF624D40L
-    const val OFFSET_VIEW_WORLD: Long = 0xF5FBFD0L
-    const val OFFSET_UE4_POINTER: Long = 0xE0C36E0L
-
-    const val OFFSET_PERSISTENT_LEVEL: Long = 0x30L
-    const val OFFSET_ACTOR_ARRAY: Long = 0xA0L  
-    const val OFFSET_ACTOR_COUNT: Long = 0xA8L  
-    const val OFFSET_ROOT_COMPONENT: Long = 0x208L
-    const val OFFSET_RELATIVE_LOCATION: Long = 0x1E4L
 
     data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
     data class Vector3(val x: Float, val y: Float, val z: Float)
@@ -46,14 +34,12 @@ object MemoryUtils {
         return pid
     }
 
-    // دالة جلب الـ Base المضمونة من خرائط النظام عبر الـ cat والـ 64 بت الصافية
     fun getModuleBase(pid: Int, moduleName: String = "libUE4.so"): Long {
         try {
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "cat /proc/$pid/maps"))
             val reader = BufferedReader(InputStreamReader(process.inputStream))
             var line: String?
             while (reader.readLine().also { line = it } != null) {
-                // فحص شامل للمكتبات التنفيذية لتجاوز تحديث 4.6.0
                 if ((line!!.contains("libUE4.so") || line!!.contains("libanogs.so") || line!!.contains("libshadowtracker")) && line!!.contains("r-xp")) {
                     val addrPart = line!!.substringBefore("-")
                     return addrPart.toLong(16)
@@ -66,20 +52,13 @@ object MemoryUtils {
         return 0L
     }
 
-    fun readMatrix(pid: Int, address: Long): FloatArray {
-        return FloatArray(16)
-    }
-
     fun worldToScreen(worldLocation: Vector3, matrix: FloatArray, screenWidth: Int, screenHeight: Int): Point2D {
         if (matrix.size < 16) return Point2D(0f, 0f, false)
-        
-        val w = matrix[3] * worldLocation.x + matrix[7] * worldLocation.y + matrix[11] * worldLocation.z + matrix[15]
+        val w = matrix * worldLocation.x + matrix * worldLocation.y + matrix * worldLocation.z + matrix
         if (w < 0.01f) return Point2D(0f, 0f, false)
-
         val invW = 1.0f / w
-        val x = screenWidth / 2 + (matrix[0] * worldLocation.x + matrix[4] * worldLocation.y + matrix[8] * worldLocation.z + matrix[12]) * invW * (screenWidth / 2)
-        val y = screenHeight / 2 - (matrix[1] * worldLocation.x + matrix[5] * worldLocation.y + matrix[9] * worldLocation.z + matrix[13]) * invW * (screenHeight / 2)
-
+        val x = screenWidth / 2 + (matrix * worldLocation.x + matrix * worldLocation.y + matrix * worldLocation.z + matrix) * invW * (screenWidth / 2)
+        val y = screenHeight / 2 - (matrix * worldLocation.x + matrix * worldLocation.y + matrix * worldLocation.z + matrix) * invW * (screenHeight / 2)
         return Point2D(x, y, true)
     }
 }
