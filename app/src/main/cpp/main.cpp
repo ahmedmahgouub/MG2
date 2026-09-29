@@ -4,11 +4,13 @@
 #include <unistd.h>
 #include <sys/uio.h>
 #include <sys/types.h>
-#include "Offsets.h"
 
 struct Vector3 {
     float x, y, z;
 };
+
+// الأوفست الجديد الذي أرسلته في الصورة للـ GEngine
+#define O_GEngine 0xEDC6210
 
 template <typename T>
 T Read(int pid, uintptr_t address) {
@@ -47,21 +49,38 @@ Java_com_muhgoub_hud_MemoryUtils_getPlayersLocations(JNIEnv *env, jobject thiz, 
     uintptr_t base_address = get_module_base(pid, "libUE4.so");
     if (!base_address) return nullptr;
 
-    uintptr_t gworld = Read<uintptr_t>(pid, base_address + Offsets::GWorld);
+    // 1. الدخول عبر بوابة الـ GEngine غير المشفّرة
+    uintptr_t gengine = Read<uintptr_t>(pid, base_address + O_GEngine);
+    if (!gengine) return nullptr;
+
+    // 2. الانتقال داخل هيكل المحرك: GameViewportClient (أوفست 0x780 القياسي)
+    uintptr_t game_viewport = Read<uintptr_t>(pid, gengine + 0x780);
+    if (!game_viewport) return nullptr;
+
+    // 3. جلب الـ World النظيف المباشر (أوفست 0x80 القياسي للـ Viewport في المحرك)
+    uintptr_t gworld = Read<uintptr_t>(pid, game_viewport + 0x80);
     if (!gworld) return nullptr;
 
-    uintptr_t persistent_level = Read<uintptr_t>(pid, gworld + Offsets::PersistentLevel);
+    // 4. قراءة الـ PersistentLevel ومصفوفة الكائنات كالعادة
+    uintptr_t persistent_level = Read<uintptr_t>(pid, gworld + 0x30); // PersistentLevel = 0x30
     if (!persistent_level) return nullptr;
 
-    int actor_count = Read<int>(pid, persistent_level + Offsets::ActorCount);
+    uintptr_t actor_array = Read<uintptr_t>(pid, persistent_level + 0xA0); // ActorArray = 0xA0
+    int actor_count = Read<int>(pid, persistent_level + 0xA8);            // ActorCount = 0xA8
 
     std::vector<Vector3> temp_players;
-    
-    // 🟢 تم استبدال الأقواس العادية بالمجعدة {} لمنع خطأ التجميع نهائياً
-    if (actor_count > 0 && actor_count < 10000) {
-        int max_loops = (actor_count > 100) ? 100 : actor_count;
-        for (int i = 0; i < max_loops; i++) {
-            temp_players.push_back(Vector3{100.0f * i, 200.0f, 0.0f});
+    int max_actors = (actor_count > 800) ? 800 : actor_count;
+
+    for (int i = 0; i < max_actors; i++) {
+        uintptr_t actor = Read<uintptr_t>(pid, actor_array + (i * 8));
+        if (!actor) continue;
+
+        uintptr_t root_component = Read<uintptr_t>(pid, actor + 0x208); // RootComponent = 0x208
+        if (!root_component) continue;
+
+        Vector3 location = Read<Vector3>(pid, root_component + 0x1E4); // RelativeLocation = 0x1E4
+        if (location.x != 0.0f && location.y != 0.0f) {
+            temp_players.push_back(location);
         }
     }
 
