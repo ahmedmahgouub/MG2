@@ -5,37 +5,30 @@ import java.io.InputStreamReader
 
 object MemoryUtils {
 
-    // 🟢 المتغير النصي المشترك لاستقبال رسالة الـ Base والـ PID من الـ C++
     @JvmStatic
     var nativeStatusMessage: String = "WAITING FOR PUBG..."
 
-    // تحميل مكتبة الـ C++ الحركية تلقائياً عند تشغيل التطبيق
     init {
         System.loadLibrary("hud_internal")
     }
 
-    // الدالة الخارجية فائقة السرعة المربوطة بملف main.cpp لربط معمارية 64 بت
     @JvmStatic
     external fun getPlayersLocations(pid: Int): Array<Vector3>?
 
-    // الأوفسيتات الأساسية والمباشرة للإصدار الأخير
     const val OFFSET_GNAME: Long = 0xF08F820L
     const val OFFSET_GWORLD: Long = 0xF624D40L
     const val OFFSET_VIEW_WORLD: Long = 0xF5FBFD0L
     const val OFFSET_UE4_POINTER: Long = 0xE0C36E0L
 
-    // الإزاحات الداخلية للهيكل
     const val OFFSET_PERSISTENT_LEVEL: Long = 0x30L
-    const val OFFSET_ACTOR_ARRAY: Long = 0xA0L  // تم التحديث لـ 64 بت لضمان عدم القراءة الصفرية
-    const val OFFSET_ACTOR_COUNT: Long = 0xA8L  // تم التحديث لـ 64 بت لضمان عدم القراءة الصفرية
+    const val OFFSET_ACTOR_ARRAY: Long = 0xA0L  
+    const val OFFSET_ACTOR_COUNT: Long = 0xA8L  
     const val OFFSET_ROOT_COMPONENT: Long = 0x208L
     const val OFFSET_RELATIVE_LOCATION: Long = 0x1E4L
 
-    // هياكل البيانات المطابقة للـ C++ والـ UI
     data class Point2D(val x: Float, val y: Float, val isValid: Boolean)
     data class Vector3(val x: Float, val y: Float, val z: Float)
 
-    // دالة جلب الـ PID السريعة والمستقرة عبر الروت
     fun findProcessId(packageName: String): Int {
         var pid = -1
         try {
@@ -52,7 +45,6 @@ object MemoryUtils {
         return pid
     }
 
-    // دالة الاحتياط لجلب عنوان الـ Base Address للعبة في الكوتلن
     fun getModuleBase(pid: Int, moduleName: String = "libUE4.so"): Long {
         try {
             val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "cat /proc/$pid/maps"))
@@ -71,21 +63,15 @@ object MemoryUtils {
         return 0L
     }
 
-    // دالة قراءة المصفوفة (ViewWorld) للكاميرا
     fun readMatrix(pid: Int, address: Long): FloatArray {
-        val matrix = FloatArray(16)
-        return matrix
+        return FloatArray(16)
     }
 
-    // دالة تحويل الإحداثيات من الـ World إلى الشاشة للرسم المباشر للمربعات
     fun worldToScreen(worldLocation: Vector3, matrix: FloatArray, screenWidth: Int, screenHeight: Int): Point2D {
-        val w = matrix[3] * worldLocation.x + matrix[7] * worldLocation.y + matrix[11] * worldLocation.z + matrix[15]
+        val funW = matrix[3] * worldLocation.x + matrix[7] * worldLocation.y + matrix[11] * worldLocation.z + matrix[15]
+        if (funW < 0.01f) return Point2D(0f, 0f, false)
 
-        if (w < 0.01f) {
-            return Point2D(0f, 0f, false)
-        }
-
-        val invW = 1.0f / w
+        val invW = 1.0f / funW
         val x = screenWidth / 2 + (matrix[0] * worldLocation.x + matrix[4] * worldLocation.y + matrix[8] * worldLocation.z + matrix[12]) * invW * (screenWidth / 2)
         val y = screenHeight / 2 - (matrix[1] * worldLocation.x + matrix[5] * worldLocation.y + matrix[9] * worldLocation.z + matrix[13]) * invW * (screenHeight / 2)
 
